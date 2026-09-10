@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background-color: #FAF0E6;
+}
+
+/* Custom Utility in Tailwind v4 */
+bg-grid-pattern {
+  background-size: 30px 30px;
+  background-image: 
+    linear-gradient(to right, rgba(30, 58, 138, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 58, 138, 0.04) 1px, transparent 1px);
+}
