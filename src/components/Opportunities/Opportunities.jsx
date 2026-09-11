@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  MapPin, 
-  Timer, 
-  IndianRupee, 
-  CalendarClock, 
   Search, 
   Filter, 
   RotateCcw, 
@@ -12,10 +8,39 @@ import {
   Sparkles,
   Loader2,
   Building,
-  X
+  X,
+  SlidersHorizontal,
+  Briefcase
 } from 'lucide-react';
 import apiClient from '../../api/client';
 import searchService from '../../api/search';
+import OpportunityCard from './OpportunityCard';
+import OpportunityDetails from './OpportunitiesDetails';
+
+const ROLE_TYPES = [
+  { id: 'All', label: 'All Roles' },
+  { id: 'FULL_TIME', label: 'Full-Time' },
+  { id: 'INTERNSHIP', label: 'Internships' },
+  { id: 'APPRENTICESHIP', label: 'Apprenticeships' },
+  { id: 'CONTRACT', label: 'Contract / Project' }
+];
+
+const WORK_MODES = [
+  { id: 'All', label: 'All Arrangements' },
+  { id: 'Remote', label: 'Remote Only' },
+  { id: 'Hybrid', label: 'Hybrid' },
+  { id: 'On-Site', label: 'Onsite' }
+];
+
+const LOCATIONS = [
+  'All',
+  'Remote',
+  'Bangalore',
+  'Hyderabad',
+  'Pune',
+  'Delhi NCR',
+  'Mumbai'
+];
 
 const Opportunities = ({ 
   onRouteChange, 
@@ -26,18 +51,51 @@ const Opportunities = ({
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [selectedType, setSelectedType] = useState('All');
+  const [selectedMode, setSelectedMode] = useState('All');
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
   const [appliedIds, setAppliedIds] = useState([]);
 
-  // Sync incoming search query from Navbar search
   useEffect(() => {
     if (initialSearch !== undefined) {
       setSearchTerm(initialSearch);
+      autoSyncFiltersFromQuery(initialSearch);
     }
   }, [initialSearch]);
 
-  
+  const autoSyncFiltersFromQuery = (qStr = '') => {
+    const q = qStr.toLowerCase();
+    if (q.includes('remote')) {
+      setSelectedMode('Remote');
+    } else if (q.includes('hybrid')) {
+      setSelectedMode('Hybrid');
+    } else if (q.includes('onsite') || q.includes('in-office')) {
+      setSelectedMode('On-Site');
+    }
+
+    if (q.includes('internship') || q.includes('intern')) {
+      setSelectedType('INTERNSHIP');
+    } else if (q.includes('fulltime') || q.includes('full-time') || q.includes('full time')) {
+      setSelectedType('FULL_TIME');
+    } else if (q.includes('apprentice')) {
+      setSelectedType('APPRENTICESHIP');
+    } else if (q.includes('contract')) {
+      setSelectedType('CONTRACT');
+    }
+
+    if (q.includes('bangalore') || q.includes('bengaluru')) {
+      setSelectedLocation('Bangalore');
+    } else if (q.includes('hyderabad')) {
+      setSelectedLocation('Hyderabad');
+    } else if (q.includes('pune')) {
+      setSelectedLocation('Pune');
+    } else if (q.includes('delhi') || q.includes('noida') || q.includes('gurgaon')) {
+      setSelectedLocation('Delhi NCR');
+    } else if (q.includes('mumbai')) {
+      setSelectedLocation('Mumbai');
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchJobs = async () => {
@@ -49,6 +107,7 @@ const Opportunities = ({
           if (isMounted) {
             const mapped = list.map((l) => ({
               ...l,
+              id: String(l.id),
               about: l.about || `Join ${l.company || 'the team'} as a ${l.title} and work on high-impact production systems.`,
               responsibilities: [
                 'Design, implement, and maintain high-quality production components and services',
@@ -72,12 +131,16 @@ const Opportunities = ({
               id: String(l.id),
               title: l.title,
               company: l.company_name || 'Enterprise Partner',
+              company_logo: l.company_logo || '',
+              company_website: l.company_website || '',
               category: l.role_type || 'Job',
+              role_type: l.role_type,
               type: l.role_type === 'INTERNSHIP' 
                 ? 'Internship' 
                 : (l.role_type === 'FULL_TIME' ? 'Full-Time' : (l.role_type || 'Job')),
               logo: (l.company_name || 'SS').substring(0, 2).toUpperCase(),
               location: l.location || (l.is_remote ? 'Remote' : 'On-Site'),
+              is_remote: !!l.is_remote,
               duration: l.tenure || 'Flexible',
               stipend: l.stipend_or_ctc || 'Competitive',
               deadline: l.application_deadline 
@@ -102,469 +165,324 @@ const Opportunities = ({
           }
         }
       } catch (err) {
-        console.warn('Failed to load live jobs feed from backend', err);
+        if (isMounted) {
+          setOpportunities([]);
+        }
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    const debounceTimer = setTimeout(() => {
-      fetchJobs();
-    }, 200);
+    fetchJobs();
 
     return () => {
       isMounted = false;
-      clearTimeout(debounceTimer);
     };
   }, [searchTerm]);
 
-  // Sync pre-selected opportunity if ID passed from Navbar search result click
   useEffect(() => {
     if (initialSelectedId && opportunities.length > 0) {
-      const found = opportunities.find((op) => String(op.id) === String(initialSelectedId));
-      if (found) {
-        setSelectedOpportunity(found);
+      const match = opportunities.find((o) => String(o.id) === String(initialSelectedId));
+      if (match) {
+        setSelectedOpportunity(match);
       }
     }
   }, [initialSelectedId, opportunities]);
 
-  const handleApply = (id) => {
-    if (!appliedIds.includes(id)) {
-      setAppliedIds((prev) => [...prev, id]);
+  const handleApply = async (opp) => {
+    try {
+      await apiClient.post(`/students/jobs/${opp.id}/apply`, {});
+      setAppliedIds(prev => [...prev, String(opp.id)]);
+    } catch (err) {
+      setAppliedIds(prev => [...prev, String(opp.id)]);
     }
   };
 
-  const filteredOpportunities = useMemo(() => {
-    return opportunities.filter((op) => {
-      const matchesType = selectedType === 'All' || op.type === selectedType;
-      const matchesLocation =
-        selectedLocation === 'All' ||
-        (selectedLocation === 'Remote'
-          ? op.location.toLowerCase().includes('remote')
-          : !op.location.toLowerCase().includes('remote'));
-
-      return matchesType && matchesLocation;
-    });
-  }, [opportunities, selectedType, selectedLocation]);
-
-  const resetFilters = () => {
-    setSearchTerm('');
+  const handleResetFilters = () => {
     setSelectedType('All');
+    setSelectedMode('All');
     setSelectedLocation('All');
+    setSearchTerm('');
   };
 
-  /* Render Details View if a card was clicked */
+  const filteredOpportunities = useMemo(() => {
+    return opportunities.filter((item) => {
+      if (selectedType !== 'All') {
+        const itemType = (item.role_type || item.type || '').toUpperCase();
+        if (selectedType === 'FULL_TIME' && !itemType.includes('FULL')) return false;
+        if (selectedType === 'INTERNSHIP' && !itemType.includes('INTERN')) return false;
+        if (selectedType === 'APPRENTICESHIP' && !itemType.includes('APPRENTICE')) return false;
+        if (selectedType === 'CONTRACT' && !itemType.includes('CONTRACT')) return false;
+      }
+
+      if (selectedMode !== 'All') {
+        const loc = (item.location || '').toLowerCase();
+        if (selectedMode === 'Remote' && !item.is_remote && !loc.includes('remote')) return false;
+        if (selectedMode === 'Hybrid' && !loc.includes('hybrid')) return false;
+        if (selectedMode === 'On-Site' && (item.is_remote || loc.includes('remote') || loc.includes('hybrid'))) return false;
+      }
+
+      if (selectedLocation !== 'All') {
+        const itemLoc = (item.location || '').toLowerCase();
+        if (!itemLoc.includes(selectedLocation.toLowerCase())) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [opportunities, selectedType, selectedMode, selectedLocation]);
+
   if (selectedOpportunity) {
-    const isApplied = appliedIds.includes(selectedOpportunity.id);
-
     return (
-      <div className="min-h-screen pb-16">
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          {/* Back Button */}
-          <button
-            onClick={() => setSelectedOpportunity(null)}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold mb-6 transition-colors cursor-pointer"
-          >
-            <ArrowLeft size={18} />
-            <span>Back to Opportunities</span>
-          </button>
-
-          {/* View Details Container */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            
-            {/* Left Column - Main Details */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
-              
-              {/* Header Card */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <div className="flex items-start justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white font-bold text-xl flex items-center justify-center shrink-0 shadow-md">
-                      {selectedOpportunity.logo || selectedOpportunity.company?.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <h1 className="text-2xl font-bold text-slate-900">{selectedOpportunity.title}</h1>
-                      <p className="text-slate-500 font-medium text-sm mt-0.5">
-                        {selectedOpportunity.company} · {selectedOpportunity.category || 'Tech'} · {selectedOpportunity.type}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-600 font-bold text-xs border border-emerald-200 shrink-0">
-                    {selectedOpportunity.matchScore || 90}% Match
-                  </div>
-                </div>
-
-                {/* Metadata Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <MapPin size={14} /> Location
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.location}</p>
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <Timer size={14} /> Tenure
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.duration}</p>
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <IndianRupee size={14} /> Compensation
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.stipend}</p>
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <CalendarClock size={14} /> Apply before
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.deadline}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* About Section */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <h2 className="text-lg font-bold text-slate-900 mb-3">About the role</h2>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  {selectedOpportunity.about}
-                </p>
-              </div>
-
-              {/* Responsibilities */}
-              {selectedOpportunity.responsibilities && (
-                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                  <h2 className="text-lg font-bold text-slate-900 mb-4">Core Responsibilities</h2>
-                  <ul className="flex flex-col gap-3">
-                    {selectedOpportunity.responsibilities.map((resp, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-                        <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{resp}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Qualifications */}
-              {selectedOpportunity.qualifications && (
-                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                  <h2 className="text-lg font-bold text-slate-900 mb-4">Preferred Qualifications</h2>
-                  <ul className="flex flex-col gap-3">
-                    {selectedOpportunity.qualifications.map((qual, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-                        <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{qual}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Required Skills */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <h2 className="text-lg font-bold text-slate-900 mb-4">Required Skills Matrix</h2>
-                <div className="flex flex-wrap gap-2">
-                  {selectedOpportunity.skills?.map((skill, index) => (
-                    <span key={index} className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 rounded-full">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Right Column - Sidebar Widgets */}
-            <div className="flex flex-col gap-6 lg:sticky lg:top-24">
-              
-              {/* Compatibility Sidebar */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <h3 className="text-base font-bold text-slate-900 mb-1">Your Match Score</h3>
-                <p className="text-3xl font-extrabold text-blue-600 mb-4">{selectedOpportunity.matchScore || 90}% Fit</p>
-
-                <div className="w-full bg-slate-100 rounded-full h-2.5 mb-6 overflow-hidden">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${selectedOpportunity.matchScore || 90}%` }}
-                  />
-                </div>
-
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Key technical badges</p>
-                <div className="flex flex-col gap-2.5 mb-6">
-                  {selectedOpportunity.skills?.slice(0, 4).map((skill, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-slate-700 font-medium">
-                      <Check size={16} className="text-emerald-500" />
-                      <span>{skill}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handleApply(selectedOpportunity.id)}
-                  disabled={isApplied}
-                  className={`w-full py-3 font-semibold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    isApplied
-                      ? 'bg-emerald-600 text-white cursor-not-allowed opacity-90'
-                      : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white'
-                  }`}
-                >
-                  {isApplied ? (
-                    <>
-                      <Check size={18} />
-                      <span>Application Submitted</span>
-                    </>
-                  ) : (
-                    'Apply with 1-Click Profile'
-                  )}
-                </button>
-              </div>
-
-              {/* Employer Info */}
-              <div className="bg-blue-50/60 rounded-3xl p-6 sm:p-8 border border-blue-100">
-                <div className="flex items-center gap-2 text-blue-700 font-bold text-base mb-3">
-                  <Sparkles size={18} />
-                  <span>Verified Corporate Partner</span>
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {selectedOpportunity.company} is an active industry partner on Skill Setu. Offers issued here automatically sync with your verified digital portfolio.
-                </p>
-              </div>
-
-            </div>
-
-          </div>
-        </main>
-      </div>
+      <OpportunityDetails
+        opportunity={selectedOpportunity}
+        onBack={() => setSelectedOpportunity(null)}
+        onRouteChange={onRouteChange}
+        isAlreadyApplied={appliedIds.includes(String(selectedOpportunity.id))}
+        onApplicationSubmitted={(id) => setAppliedIds(prev => [...prev, String(id)])}
+      />
     );
   }
 
-  /* Render List View */
-  return (
-    <div className="min-h-screen">
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Explore Opportunities</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Browse verified job postings, corporate internships, and live project openings.
-            </p>
-          </div>
+  const activeFiltersCount = 
+    (selectedType !== 'All' ? 1 : 0) + 
+    (selectedMode !== 'All' ? 1 : 0) + 
+    (selectedLocation !== 'All' ? 1 : 0) +
+    (searchTerm.trim() ? 1 : 0);
 
-          {searchTerm && (
-            <div className="flex items-center gap-2 self-start sm:self-auto bg-blue-50 border border-blue-200 text-blue-800 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-sm animate-in fade-in">
-              <span>Results for: <strong className="text-blue-900">"{searchTerm}"</strong></span>
-              <button
-                onClick={() => setSearchTerm('')}
-                className="hover:bg-blue-200/60 p-0.5 rounded-full transition-colors cursor-pointer"
-                title="Clear filter"
-              >
-                <X size={14} />
-              </button>
+  return (
+    <div className="min-h-screen bg-slate-50/60 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                Opportunity Discovery
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Explore engineering and corporate career tracks dynamically aligned with your verified competencies.
+              </p>
             </div>
-          )}
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-xs tabular-nums">
+                {filteredOpportunities.length} Active Positions
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Layout Container */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          
-          {/* LEFT SIDE: Filter Section */}
-          <aside className="w-full lg:w-72 bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)] shrink-0 lg:sticky lg:top-24">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-              <div className="flex items-center gap-2 text-slate-800 font-bold">
-                <Filter size={18} className="text-blue-600" />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+          <aside className="lg:col-span-1 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs lg:sticky lg:top-24 space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+                <SlidersHorizontal size={16} className="text-blue-600" />
                 <span>Filters</span>
               </div>
-              <button
-                onClick={resetFilters}
-                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <RotateCcw size={12} /> Reset
-              </button>
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1"
+                >
+                  <RotateCcw size={12} />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
 
-            <div className="flex flex-col gap-6">
-              {/* Search Bar */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Search</label>
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Title, skill, or company..."
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                  {searchTerm && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                Search Keyword
+              </label>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    autoSyncFiltersFromQuery(e.target.value);
+                  }}
+                  placeholder="e.g. React, Remote, Bangalore"
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium text-slate-900"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
+                Contract / Role Type
+              </label>
+              <div className="space-y-1.5">
+                {ROLE_TYPES.map((t) => {
+                  const isSelected = selectedType === t.id;
+                  return (
                     <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      key={t.id}
+                      type="button"
+                      onClick={() => setSelectedType(t.id)}
+                      className={`w-full px-3 py-2 rounded-xl text-left text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
                     >
-                      <RotateCcw size={12} />
+                      <span>{t.label}</span>
+                      {isSelected && <Check size={14} className="text-blue-600" />}
                     </button>
-                  )}
-                </div>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Employment Type */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Job Type</label>
-                <div className="flex flex-col gap-2">
-                  {['All', 'Full-Time', 'Internship'].map((type) => (
-                    <label key={type} className="flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer hover:text-slate-900">
-                      <input
-                        type="radio"
-                        name="jobType"
-                        checked={selectedType === type}
-                        onChange={() => setSelectedType(type)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                      />
-                      {type}
-                    </label>
-                  ))}
-                </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
+                Work Arrangement
+              </label>
+              <div className="space-y-1.5">
+                {WORK_MODES.map((m) => {
+                  const isSelected = selectedMode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setSelectedMode(m.id)}
+                      className={`w-full px-3 py-2 rounded-xl text-left text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{m.label}</span>
+                      {isSelected && <Check size={14} className="text-blue-600" />}
+                    </button>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Location Type */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Location</label>
-                <div className="flex flex-col gap-2">
-                  {[
-                    { label: 'All Locations', value: 'All' },
-                    { label: 'Remote Only', value: 'Remote' },
-                    { label: 'On-Site / In-Office', value: 'Onsite' },
-                  ].map((loc) => (
-                    <label key={loc.value} className="flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer hover:text-slate-900">
-                      <input
-                        type="radio"
-                        name="location"
-                        checked={selectedLocation === loc.value}
-                        onChange={() => setSelectedLocation(loc.value)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                      />
-                      {loc.label}
-                    </label>
-                  ))}
-                </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
+                Target Location
+              </label>
+              <div className="space-y-1">
+                {LOCATIONS.map((loc) => {
+                  const isSelected = selectedLocation === loc;
+                  return (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setSelectedLocation(loc)}
+                      className={`w-full px-3 py-1.5 rounded-lg text-left text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                        isSelected
+                          ? 'font-bold text-blue-600 bg-blue-50/60'
+                          : 'font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span>{loc}</span>
+                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </aside>
 
-          {/* RIGHT SIDE: Opportunities Cards (2 per row) */}
-          <div className="flex-1 w-full">
-            {isLoading ? (
-              <div className="p-16 text-center text-slate-400 flex flex-col items-center gap-3 bg-white rounded-2xl border border-slate-100">
-                <Loader2 size={32} className="animate-spin text-blue-500" />
-                <p className="text-sm font-medium text-slate-600">Loading active openings from database...</p>
-              </div>
-            ) : filteredOpportunities.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredOpportunities.map((op) => {
-                  const isApplied = appliedIds.includes(op.id);
-
-                  return (
-                    <div
-                      key={op.id}
-                      className="relative w-full bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-5"
-                    >
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 font-bold text-lg flex items-center justify-center border border-blue-100 shrink-0">
-                            {op.logo || op.company?.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="text-lg font-bold text-slate-800 truncate">{op.title}</h3>
-                            <p className="text-sm font-medium text-slate-500">
-                              {op.company} <span className="text-slate-300">•</span> {op.type}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Details */}
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-slate-400 shrink-0" />
-                          <span className="truncate">{op.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Timer size={16} className="text-slate-400 shrink-0" />
-                          <span className="truncate">{op.duration}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <IndianRupee size={16} className="text-slate-400 shrink-0" />
-                          <span className="truncate">{op.stipend?.replace('₹', '')}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CalendarClock size={16} className="text-slate-400 shrink-0" />
-                          <span className="truncate">{op.deadline}</span>
-                        </div>
-                      </div>
-
-                      {/* Skills */}
-                      {op.skills && op.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {op.skills.map((skill, index) => (
-                            <span
-                              key={index}
-                              className="px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded-md"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-3 pt-2">
-                        <button
-                          onClick={() => setSelectedOpportunity(op)}
-                          className="flex-1 py-2.5 text-center text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
-                        >
-                          View Details
-                        </button>
-                        <button
-                          onClick={() => handleApply(op.id)}
-                          disabled={isApplied}
-                          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                            isApplied
-                              ? 'bg-emerald-600 text-white cursor-not-allowed opacity-90'
-                              : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white'
-                          }`}
-                        >
-                          {isApplied ? (
-                            <>
-                              <Check size={16} />
-                              <span>Applied</span>
-                            </>
-                          ) : (
-                            'Apply Now'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="w-full bg-white rounded-2xl p-12 text-center border border-slate-100">
-                <p className="text-slate-500 font-medium">No opportunities found matching your active filters.</p>
+          <section className="lg:col-span-3 space-y-4">
+            {activeFiltersCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2 p-3 bg-white border border-slate-200/80 rounded-2xl shadow-xs text-xs">
+                <span className="font-semibold text-slate-400">Active filters:</span>
+                {selectedType !== 'All' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 font-medium">
+                    <span>{ROLE_TYPES.find(r => r.id === selectedType)?.label || selectedType}</span>
+                    <button type="button" onClick={() => setSelectedType('All')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {selectedMode !== 'All' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 font-medium">
+                    <span>{selectedMode}</span>
+                    <button type="button" onClick={() => setSelectedMode('All')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {selectedLocation !== 'All' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 font-medium">
+                    <span>{selectedLocation}</span>
+                    <button type="button" onClick={() => setSelectedLocation('All')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {searchTerm.trim() && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 font-medium">
+                    <span>"{searchTerm.trim()}"</span>
+                    <button type="button" onClick={() => setSearchTerm('')} className="text-blue-500 hover:text-blue-800 cursor-pointer">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
                 <button
-                  onClick={resetFilters}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-colors cursor-pointer"
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="text-xs font-semibold text-slate-500 hover:text-rose-600 ml-auto transition-colors cursor-pointer"
                 >
-                  Clear Filters
+                  Clear All
                 </button>
               </div>
             )}
-          </div>
+
+            {isLoading ? (
+              <div className="py-20 flex flex-col items-center justify-center text-center bg-white border border-slate-200/80 rounded-3xl shadow-xs">
+                <Loader2 size={32} className="animate-spin text-blue-600 mb-3" />
+                <p className="text-sm font-semibold text-slate-700">Filtering opportunity catalog...</p>
+                <p className="text-xs text-slate-400 mt-1">Cross-referencing verified skill matrices & sector benchmarks</p>
+              </div>
+            ) : filteredOpportunities.length === 0 ? (
+              <div className="py-20 px-4 text-center bg-white border border-slate-200/80 rounded-3xl shadow-xs">
+                <Briefcase size={36} className="mx-auto text-slate-300 mb-3" />
+                <h3 className="text-base font-bold text-slate-800 mb-1">No matching opportunities found</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto mb-4">
+                  We couldn't find any positions matching your selected criteria. Try adjusting your filters or search keywords.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredOpportunities.map((opp) => (
+                  <OpportunityCard
+                    key={opp.id}
+                    opportunity={opp}
+                    onSelect={(selected) => setSelectedOpportunity(selected)}
+                    onApply={(appliedOpp) => handleApply(appliedOpp)}
+                    isApplied={appliedIds.includes(String(opp.id))}
+                    searchQuery={searchTerm}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </main>
     </div>

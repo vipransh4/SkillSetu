@@ -227,6 +227,33 @@ export const authService = {
     return response.data;
   },
 
+  async uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post('/auth/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    const data = response.data;
+    const current = this.getUser();
+    if (current) {
+      current.avatar_url = data.avatar_url;
+      this.setUser(current);
+    }
+    return data;
+  },
+
+  async removeAvatar() {
+    const response = await apiClient.delete('/auth/avatar');
+    const current = this.getUser();
+    if (current) {
+      current.avatar_url = null;
+      this.setUser(current);
+    }
+    return response.data;
+  },
+
   logout() {
     sessionStorage.removeItem('skillsetu_token');
     sessionStorage.removeItem('skillsetu_user');

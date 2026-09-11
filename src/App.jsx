@@ -11,6 +11,7 @@ import Industry from './components/Uploading/Industry';
 import Acadmecian from './components/Uploading/Acadmecian';
 import StudentPortfolio from './components/Uploading/StudentPortfolio';
 import Profile from './components/Profile/Profile';
+import MySkills from './components/MySkills/MySkills';
 import authService from './api/auth';
 import './App.css';
 
@@ -95,7 +96,7 @@ function App() {
   const isBannerVisible = showNavbar && user && !user.is_email_verified && route !== 'verify-email' && !isBannerDismissed;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 overflow-x-hidden">
       {showNavbar && (
         <Navbar
           onRouteChange={handleRouteChange}
@@ -135,7 +136,7 @@ function App() {
         </div>
       )}
 
-      <main className={showNavbar ? (isBannerVisible ? "pt-32" : "pt-20") : ""}>
+      <main className={`overflow-x-hidden ${showNavbar ? (isBannerVisible ? "pt-32" : "pt-20") : ""} ${route === 'home' ? 'h-screen overflow-hidden' : ''}`}>
         {route === 'home' && <Home onRouteChange={handleRouteChange} />}
         
         {route === 'opportunities' && (
@@ -200,11 +201,18 @@ function App() {
           />
         )}
         
+        {route === 'my-skills' && (
+          user?.role === 'student' ? (
+            <MySkills onRouteChange={handleRouteChange} initialTab="matrix" />
+          ) : (
+            <Opportunities onRouteChange={handleRouteChange} />
+          )
+        )}
+
         {route === 'upload-skills' && <StudentPortfolio onRouteChange={handleRouteChange} />}
         {route === 'upload-lectures' && <Acadmecian onRouteChange={handleRouteChange} />}
         {route === 'post-jobs' && <Industry onRouteChange={handleRouteChange} />}
 
-        {/* Fallback handlers for learning / assessment routes */}
         {route === 'learning' && (
           user?.role === 'academician' 
             ? <Acadmecian onRouteChange={handleRouteChange} />
@@ -212,7 +220,7 @@ function App() {
         )}
         {route === 'assessment' && (
           user?.role === 'student'
-            ? <StudentPortfolio onRouteChange={handleRouteChange} />
+            ? <MySkills onRouteChange={handleRouteChange} initialTab="assessment" />
             : (user?.role === 'industry' 
                 ? <Students onRouteChange={handleRouteChange} /> 
                 : <Opportunities onRouteChange={handleRouteChange} initialSearch="Assessment" />)

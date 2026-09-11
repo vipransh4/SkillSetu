@@ -46,9 +46,8 @@ const Home = ({ slides = defaultSlides, interval = 6000, onRouteChange }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-900">
-
-      <div className="relative w-screen flex-1 h-[calc(100vh-80px)] overflow-hidden flex items-center justify-center">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-slate-900">
+      <div className="relative w-full h-full flex-1 overflow-hidden flex items-center justify-center">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={page}
@@ -69,7 +68,7 @@ const Home = ({ slides = defaultSlides, interval = 6000, onRouteChange }) => {
               className="w-full h-full object-cover"
             />
 
-            <div className="absolute bottom-50 left-10 sm:left-20 z-20">
+            <div className="absolute bottom-16 left-8 sm:left-16 z-20">
               <button
                 onClick={() => onRouteChange(currentSlide.route)}
                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold rounded-xl shadow-lg transition-all cursor-pointer group"
@@ -81,7 +80,6 @@ const Home = ({ slides = defaultSlides, interval = 6000, onRouteChange }) => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Previous Button */}
         <button
           onClick={() => paginate(-1)}
           className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-black/50 hover:bg-black/75 text-white transition-all backdrop-blur-sm cursor-pointer"
@@ -90,7 +88,6 @@ const Home = ({ slides = defaultSlides, interval = 6000, onRouteChange }) => {
           <ChevronLeft size={24} />
         </button>
 
-        {/* Next Button */}
         <button
           onClick={() => paginate(1)}
           className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-black/50 hover:bg-black/75 text-white transition-all backdrop-blur-sm cursor-pointer"
@@ -99,7 +96,6 @@ const Home = ({ slides = defaultSlides, interval = 6000, onRouteChange }) => {
           <ChevronRight size={24} />
         </button>
 
-        {/* Navigation Dots */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex space-x-2">
           {slides.map((_, index) => (
             <button

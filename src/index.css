@@ -3,7 +3,8 @@
 html, body, #root {
   margin: 0;
   padding: 0;
-  background-color: #FAF0E6;
+  background-color: #F8F9FA;
+  overflow-x: hidden;
 }
 
 /* Custom Utility in Tailwind v4 */
