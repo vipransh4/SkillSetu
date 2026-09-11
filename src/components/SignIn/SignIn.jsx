@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import Logo from './Logo';
 import RightHeroPanel from './RightHeroPanel';
+import ForgotPasswordModal from './ForgotPasswordModal';
+import authService from '../../api/auth';
 
 const SignIn = ({ onRouteChange, onLoginSuccess }) => {
-  const [role, setProfessionRole] = useState('student');
   const [formData, setFormData] = useState({
     username: '',
     password: '',
   });
 
   const [errors, setErrors] = useState({});
+  const [generalError, setGeneralError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,14 +23,18 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
+    if (generalError) {
+      setGeneralError('');
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setGeneralError('');
     const newErrors = {};
 
     if (!formData.username.trim()) {
-      newErrors.username = 'This field is required';
+      newErrors.username = 'Please enter your email or username';
     }
 
     if (!formData.password.trim()) {
@@ -43,23 +50,38 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      // Pass user object and role to App.js to updateNavbar state
+    try {
+      const user = await authService.login({
+        username: formData.username,
+        password: formData.password,
+      });
+
+      // Role is automatically detected from backend database
       if (onLoginSuccess) {
-        onLoginSuccess({
-          username: formData.username,
-          role: role, // 'student' | 'academician' | 'industry'
-        });
+        onLoginSuccess(user);
       } else {
         onRouteChange('home');
       }
-    }, 1200);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        (err.code === 'ERR_NETWORK'
+          ? 'Unable to connect to Skill Setu backend server. Please verify Django is running.'
+          : 'Invalid credentials. Please check your email/username and password.');
+      setGeneralError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="flex min-h-screen w-full bg-slate-50">
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+      />
+
       {/* LEFT: Hero Image Panel */}
       <RightHeroPanel
         title="Bridge the Gap Between"
@@ -88,54 +110,20 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
             </p>
           </div>
 
+          {/* Error Banner */}
+          {generalError && (
+            <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-xs font-semibold text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+              <span>{generalError}</span>
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            {/* Role / Profession Selection */}
+            {/* Username / Email Field */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Select Your Role
-              </label>
-              <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-200/70 p-1">
-                <button
-                  type="button"
-                  onClick={() => setProfessionRole('student')}
-                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    role === 'student'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Student
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProfessionRole('academician')}
-                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    role === 'academician'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Academician
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProfessionRole('industry')}
-                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    role === 'industry'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Industry
-                </button>
-              </div>
-            </div>
-
-            {/* Username Field */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Username
+                Email or Username
               </label>
               <div className="relative flex items-center">
                 <User className="absolute left-3.5 h-5 w-5 text-slate-400" />
@@ -144,7 +132,7 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  placeholder="Enter your username"
+                  placeholder="Enter your email or username"
                   className={`w-full rounded-xl border bg-white py-3 pl-11 pr-4 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-all ${
                     errors.username
                       ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
@@ -195,10 +183,15 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
 
             {/* Forgot Password Link */}
             <div className="flex justify-end">
-              <a href="#" className="text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+              <button
+                type="button"
+                onClick={() => setIsForgotPasswordOpen(true)}
+                className="text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors cursor-pointer"
+              >
                 Forgot Password?
-              </a>
+              </button>
             </div>
+
 
             {/* Submit Button */}
             <button
@@ -247,7 +240,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
             </div>
           </form>
 
-          {/* Footer Navigation */}
           <p className="text-center text-sm font-medium text-slate-600">
             Don't have an account?{' '}
             <button
@@ -260,6 +252,16 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
           </p>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+        initialEmail={formData.username.includes('@') ? formData.username.trim() : ''}
+        onResetSuccess={() => {
+          setIsForgotPasswordOpen(false);
+          setGeneralError('');
+        }}
+      />
     </div>
   );
 };

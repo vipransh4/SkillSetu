@@ -1,7 +1,84 @@
-import React, { useState } from 'react';
-import { User, Lock, Calendar, Eye, EyeOff, GraduationCap, BookOpen, Briefcase, Building, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Lock, Calendar, Eye, EyeOff, GraduationCap, BookOpen, Briefcase, Loader2, Mail, AlertCircle } from 'lucide-react';
 import Logo from './Logo';
 import RightHeroPanel from './RightHeroPanel';
+import CollegeAutocomplete from './CollegeAutocomplete';
+import authService from '../../api/auth';
+
+const ACADEMIC_DOMAIN_MAP = {
+  'chitkara.edu.in': 'Chitkara University',
+  'chitkara.edu': 'Chitkara University',
+  'iitb.ac.in': 'Indian Institute of Technology Bombay (IIT Bombay)',
+  'iitd.ac.in': 'Indian Institute of Technology Delhi (IIT Delhi)',
+  'iitm.ac.in': 'Indian Institute of Technology Madras (IIT Madras)',
+  'iitk.ac.in': 'Indian Institute of Technology Kanpur (IIT Kanpur)',
+  'iitkgp.ac.in': 'Indian Institute of Technology Kharagpur (IIT Kharagpur)',
+  'iitr.ac.in': 'Indian Institute of Technology Roorkee (IIT Roorkee)',
+  'iitg.ac.in': 'Indian Institute of Technology Guwahati (IIT Guwahati)',
+  'iith.ac.in': 'Indian Institute of Technology Hyderabad (IIT Hyderabad)',
+  'iitbhu.ac.in': 'Indian Institute of Technology (BHU) Varanasi',
+  'iitism.ac.in': 'Indian Institute of Technology (ISM) Dhanbad',
+  'iitbbs.ac.in': 'Indian Institute of Technology Bhubaneswar',
+  'iitgn.ac.in': 'Indian Institute of Technology Gandhinagar',
+  'iitj.ac.in': 'Indian Institute of Technology Jodhpur',
+  'iitp.ac.in': 'Indian Institute of Technology Patna',
+  'iitrpr.ac.in': 'Indian Institute of Technology Ropar',
+  'iitmandi.ac.in': 'Indian Institute of Technology Mandi',
+  'iiti.ac.in': 'Indian Institute of Technology Indore',
+  'iitpkd.ac.in': 'Indian Institute of Technology Palakkad',
+  'iittp.ac.in': 'Indian Institute of Technology Tirupati',
+  'iitjammu.ac.in': 'Indian Institute of Technology Jammu',
+  'iitdh.ac.in': 'Indian Institute of Technology Dharwad',
+  'iitgoa.ac.in': 'Indian Institute of Technology Goa',
+  'iitbhilai.ac.in': 'Indian Institute of Technology Bhilai',
+  'nitk.edu.in': 'National Institute of Technology Karnataka, Surathkal',
+  'nitk.ac.in': 'National Institute of Technology Karnataka, Surathkal',
+  'nitt.edu': 'National Institute of Technology Tiruchirappalli (NIT Trichy)',
+  'nitw.ac.in': 'National Institute of Technology Warangal (NIT Warangal)',
+  'nitrkl.ac.in': 'National Institute of Technology Rourkela',
+  'vnit.ac.in': 'Visvesvaraya National Institute of Technology, Nagpur',
+  'mnit.ac.in': 'Malaviya National Institute of Technology, Jaipur',
+  'mnnit.ac.in': 'Motilal Nehru National Institute of Technology Allahabad',
+  'manit.ac.in': 'Maulana Azad National Institute of Technology Bhopal',
+  'svnit.ac.in': 'Sardar Vallabhbhai National Institute of Technology Surat',
+  'nitc.ac.in': 'National Institute of Technology Calicut',
+  'nitdgp.ac.in': 'National Institute of Technology Durgapur',
+  'nitkkr.ac.in': 'National Institute of Technology Kurukshetra',
+  'nits.ac.in': 'National Institute of Technology Silchar',
+  'nitjsr.ac.in': 'National Institute of Technology Jamshedpur',
+  'nitp.ac.in': 'National Institute of Technology Patna',
+  'nitrr.ac.in': 'National Institute of Technology Raipur',
+  'nitsri.ac.in': 'National Institute of Technology Srinagar',
+  'nitj.ac.in': 'Dr. B R Ambedkar National Institute of Technology Jalandhar',
+  'iiitd.ac.in': 'Indraprastha Institute of Information Technology Delhi (IIIT-Delhi)',
+  'iiita.ac.in': 'Indian Institute of Information Technology, Allahabad',
+  'iiit.ac.in': 'International Institute of Information Technology, Hyderabad (IIIT-H)',
+  'iiitb.ac.in': 'International Institute of Information Technology Bangalore (IIIT-B)',
+  'iisc.ac.in': 'Indian Institute of Science (IISc), Bangalore',
+  'iisc.ernet.in': 'Indian Institute of Science (IISc), Bangalore',
+  'bits-pilani.ac.in': 'Birla Institute of Technology and Science, Pilani (BITS Pilani)',
+  'thapar.edu': 'Thapar Institute of Engineering and Technology, Patiala',
+  'dtu.ac.in': 'Delhi Technological University (DTU)',
+  'nsut.ac.in': 'Netaji Subhas University of Technology (NSUT)',
+  'du.ac.in': 'University of Delhi (Delhi University)',
+  'jnu.ac.in': 'Jawaharlal Nehru University (JNU), New Delhi',
+  'bhu.ac.in': 'Banaras Hindu University (BHU), Varanasi',
+  'amu.ac.in': 'Aligarh Muslim University (AMU)',
+  'vit.ac.in': 'Vellore Institute of Technology (VIT), Vellore',
+  'manipal.edu': 'Manipal Academy of Higher Education (MAHE)',
+  'srmist.edu.in': 'SRM Institute of Science and Technology, Chennai',
+  'amity.edu': 'Amity University',
+  'cuchd.in': 'Chandigarh University',
+  'lpu.in': 'Lovely Professional University (LPU)',
+  'lpu.co.in': 'Lovely Professional University (LPU)',
+  'nift.ac.in': 'National Institute of Fashion Technology (NIFT)',
+  'iima.ac.in': 'Indian Institute of Management Ahmedabad (IIM-A)',
+  'iimb.ac.in': 'Indian Institute of Management Bangalore (IIM-B)',
+  'iimc.ac.in': 'Indian Institute of Management Calcutta (IIM-C)',
+  'iiml.ac.in': 'Indian Institute of Management Lucknow (IIM-L)',
+  'iimk.ac.in': 'Indian Institute of Management Kozhikode (IIM-K)',
+  'iimi.ac.in': 'Indian Institute of Management Indore (IIM-I)',
+};
 
 const Register = ({ onRouteChange, onLoginSuccess }) => {
   const [profession, setProfession] = useState('student');
@@ -9,6 +86,7 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
     firstname: '',
     lastname: '',
     username: '',
+    email: '',
     password: '',
     dob: '',
     college: '',
@@ -20,8 +98,24 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const [generalError, setGeneralError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const lastDetectedDomain = useRef('');
+
+  useEffect(() => {
+    if (!formData.email || !formData.email.includes('@')) return;
+    const parts = formData.email.trim().toLowerCase().split('@');
+    if (parts.length !== 2) return;
+    const domain = parts[1];
+
+    if (domain === lastDetectedDomain.current) return;
+
+    if (ACADEMIC_DOMAIN_MAP[domain]) {
+      lastDetectedDomain.current = domain;
+      setFormData((prev) => ({ ...prev, college: ACADEMIC_DOMAIN_MAP[domain] }));
+    }
+  }, [formData.email]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,9 +123,11 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
+    if (generalError) {
+      setGeneralError('');
+    }
   };
 
-  // Password strength calculation
   const getPasswordStrength = () => {
     const pwd = formData.password;
     if (!pwd) return { score: 0, label: '', color: '' };
@@ -50,8 +146,9 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
 
   const strength = getPasswordStrength();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setGeneralError('');
     const newErrors = {};
 
     // Validate required fields
@@ -59,6 +156,12 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
     if (!formData.lastname.trim()) newErrors.lastname = 'This field is required';
     if (!formData.username.trim()) newErrors.username = 'This field is required';
     
+    if (!formData.email.trim()) {
+      newErrors.email = 'This field is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
     if (!formData.password.trim()) {
       newErrors.password = 'This field is required';
     } else if (formData.password.length < 8) {
@@ -86,21 +189,39 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      
+    try {
+      const user = await authService.register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        firstname: formData.firstname,
+        lastname: formData.lastname,
+        profession: profession,
+        dob: formData.dob,
+        college: formData.college,
+        year: formData.year,
+        department: formData.department,
+        qualification: formData.qualification,
+        company: formData.company,
+        companytype: formData.companytype,
+      });
+
       // Pass user and role data to App.js to update state and show dynamic Navbar options
       if (onLoginSuccess) {
-        onLoginSuccess({
-          username: formData.username,
-          firstname: formData.firstname,
-          lastname: formData.lastname,
-          role: profession, // 'student' | 'academician' | 'industry'
-        });
+        onLoginSuccess(user);
       } else {
         onRouteChange('home');
       }
-    }, 1200);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        (err.code === 'ERR_NETWORK'
+          ? 'Unable to connect to Skill Setu backend server. Please verify Django is running.'
+          : 'Registration failed. Please review your details and try again.');
+      setGeneralError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -132,6 +253,14 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
               Join Skill Setu and start bridging the gap
             </p>
           </div>
+
+          {/* Error Banner */}
+          {generalError && (
+            <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-xs font-semibold text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+              <span>{generalError}</span>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -204,6 +333,30 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
               </div>
               {errors.username && <p className="text-xs font-medium text-red-500">{errors.username}</p>}
             </div>
+
+            {/* Email Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                Email Address
+              </label>
+              <div className="relative flex items-center">
+                <Mail className="absolute left-3.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  className={`w-full rounded-xl border bg-white py-2.5 pl-10 pr-3 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-all ${
+                    errors.email
+                      ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                      : 'border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10'
+                  }`}
+                />
+              </div>
+              {errors.email && <p className="text-xs font-medium text-red-500">{errors.email}</p>}
+            </div>
+
 
             {/* Password Field */}
             <div className="space-y-1">
@@ -323,27 +476,15 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
             {/* Dynamic Role Fields */}
             {profession === 'student' && (
               <div className="grid grid-cols-2 gap-3 pt-1 animate-fadeIn">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    College / University
-                  </label>
-                  <div className="relative flex items-center">
-                    <Building className="absolute left-3.5 h-4 w-4 text-slate-400" />
-                    <input
-                      type="text"
-                      name="college"
-                      value={formData.college}
-                      onChange={handleChange}
-                      placeholder="e.g. Chitkara University"
-                      className={`w-full rounded-xl border bg-white py-2.5 pl-10 pr-3 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-all ${
-                        errors.college
-                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
-                          : 'border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10'
-                      }`}
-                    />
-                  </div>
-                  {errors.college && <p className="text-xs font-medium text-red-500">{errors.college}</p>}
-                </div>
+                <CollegeAutocomplete
+                  value={formData.college}
+                  onChange={(collegeName) => {
+                    setFormData((prev) => ({ ...prev, college: collegeName }));
+                    if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
+                  }}
+                  error={errors.college}
+                />
+
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Year of Study
