@@ -13,6 +13,7 @@ import StudentPortfolio from './components/Uploading/StudentPortfolio';
 import Profile from './components/Profile/Profile';
 import MySkills from './components/MySkills/MySkills';
 import authService from './api/auth';
+import Learning from './components/Learning/learning';
 import './App.css';
 
 function App() { 
@@ -20,7 +21,12 @@ function App() {
   const [user, setUser] = useState(() => authService.getUser());
   const [searchParams, setSearchParams] = useState({ query: '', selectedId: null });
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
-
+  const [scheduledCalls, setScheduledCalls] = useState([]);
+  
+  const addScheduledCall = (call) => {
+    setScheduledCalls((prev) => [...prev, call]);
+  };
+  
   useEffect(() => {
     const token = authService.getToken();
     if (token) {
@@ -70,7 +76,6 @@ function App() {
     setRoute('home');
   };
 
-  // Handle role-aware search query submission (Enter key)
   const handleSearchSubmit = ({ query, role }) => {
     setSearchParams({ query, selectedId: null });
     if (role === 'industry') {
@@ -80,13 +85,11 @@ function App() {
     }
   };
 
-  // Handle clicking a specific search result card in Navbar dropdown
   const handleSearchSelect = ({ type, item }) => {
     if (type === 'candidate') {
       setSearchParams({ query: '', selectedId: item.id });
       setRoute('students');
     } else {
-      // job or faculty
       setSearchParams({ query: '', selectedId: item.id });
       setRoute('opportunities');
     }
@@ -108,7 +111,7 @@ function App() {
       )}
 
       {isBannerVisible && (
-        <div className="fixed top-[74px] left-0 right-0 z-40 flex justify-center px-4">
+        <div className="fixed top-20 left-0 right-0 z-40 flex justify-center px-4">
           <div className="w-full max-w-4xl bg-amber-500/10 backdrop-blur-md border border-amber-300 text-amber-900 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs sm:text-sm shadow-sm animate-in fade-in duration-200">
             <div className="flex items-center gap-2 min-w-0">
               <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
@@ -144,6 +147,7 @@ function App() {
             onRouteChange={handleRouteChange} 
             initialSearch={searchParams.query}
             initialSelectedId={searchParams.selectedId}
+            scheduledCalls={scheduledCalls}
           />
         )}
 
@@ -159,6 +163,7 @@ function App() {
               onRouteChange={handleRouteChange} 
               initialSearch={searchParams.query}
               initialSelectedId={searchParams.selectedId}
+              scheduledCalls={scheduledCalls}
             />
           )
         )}
@@ -205,25 +210,27 @@ function App() {
           user?.role === 'student' ? (
             <MySkills onRouteChange={handleRouteChange} initialTab="matrix" />
           ) : (
-            <Opportunities onRouteChange={handleRouteChange} />
+            <Opportunities onRouteChange={handleRouteChange} scheduledCalls={scheduledCalls} />
           )
         )}
 
         {route === 'upload-skills' && <StudentPortfolio onRouteChange={handleRouteChange} />}
         {route === 'upload-lectures' && <Acadmecian onRouteChange={handleRouteChange} />}
-        {route === 'post-jobs' && <Industry onRouteChange={handleRouteChange} />}
+        {route === 'post-jobs' && <Industry onRouteChange={handleRouteChange} scheduledCalls={scheduledCalls} onScheduleCall={addScheduledCall} />}
+        {route === 'learning' && <Learning onRouteChange={handleRouteChange} />}
 
-        {route === 'learning' && (
+        {route === 'opportunity' && (
           user?.role === 'academician' 
             ? <Acadmecian onRouteChange={handleRouteChange} />
-            : <Opportunities onRouteChange={handleRouteChange} initialSearch="Learning" />
+            : <Opportunities onRouteChange={handleRouteChange} initialSearch="Opportunities" scheduledCalls={scheduledCalls} />
         )}
+        
         {route === 'assessment' && (
           user?.role === 'student'
             ? <MySkills onRouteChange={handleRouteChange} initialTab="assessment" />
             : (user?.role === 'industry' 
                 ? <Students onRouteChange={handleRouteChange} /> 
-                : <Opportunities onRouteChange={handleRouteChange} initialSearch="Assessment" />)
+                : <Opportunities onRouteChange={handleRouteChange} initialSearch="Assessment" scheduledCalls={scheduledCalls} />)
         )}
       </main>
     </div>

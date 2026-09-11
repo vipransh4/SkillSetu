@@ -6,9 +6,9 @@ import {
   CalendarClock, 
   ArrowUpRight, 
   Check, 
-  Building2,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Video
 } from 'lucide-react';
 
 const OpportunityCard = ({ 
@@ -16,7 +16,9 @@ const OpportunityCard = ({
   onSelect, 
   onApply, 
   isApplied = false,
-  searchQuery = '' 
+  searchQuery = '',
+  calls = [],
+  onJoinCall
 }) => {
   const queryWords = searchQuery
     .toLowerCase()
@@ -48,12 +50,24 @@ const OpportunityCard = ({
     .toUpperCase();
 
   const matchPercent = opportunity.matchScore || 92;
+  const hasCall = calls && calls.length > 0;
 
   return (
     <div 
-      className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+      className={`bg-white border rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 flex flex-col justify-between group ${
+        hasCall ? 'border-violet-300 ring-1 ring-violet-200/60' : 'border-slate-200/80'
+      }`}
     >
       <div>
+        {hasCall && (
+          <div className="mb-2.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-violet-50 text-violet-700 border border-violet-200/80 rounded-full text-[11px] font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-pulse" />
+              Interview Scheduled
+            </span>
+          </div>
+        )}
+
         <div className="flex items-start justify-between gap-3 mb-3.5">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800 font-bold text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:border-blue-300 transition-colors overflow-hidden">
@@ -122,7 +136,7 @@ const OpportunityCard = ({
         </div>
 
         {opportunity.skills && opportunity.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
+          <div className="flex flex-wrap gap-1.5 mb-3.5">
             {opportunity.skills.slice(0, 4).map((skill, idx) => {
               const matched = isSkillMatched(skill);
               return (
@@ -143,6 +157,34 @@ const OpportunityCard = ({
                 +{opportunity.skills.length - 4} more
               </span>
             )}
+          </div>
+        )}
+
+        {hasCall && (
+          <div className="bg-violet-50/70 border border-violet-100 rounded-xl p-2.5 mb-3.5 space-y-2">
+            {calls.map((call) => (
+              <div key={call.id} className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 truncate">
+                    Interview · {call.candidateName}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {new Date(call.scheduledTime).toLocaleString('en-IN', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onJoinCall?.(call)}
+                  className="px-3 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95"
+                >
+                  <Video size={12} />
+                  Join
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

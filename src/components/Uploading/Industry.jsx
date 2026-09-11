@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { Video, Calendar, X, Phone } from 'lucide-react';
+import Navbar from '../Navbar/Navbar';
+import VideoCall from '../Video/VideoCall';
 
 const initialJobs = [
   {
@@ -27,7 +30,7 @@ const initialJobs = [
   },
 ];
 
-const Industry = ({onRouteChange}) => {
+const Industry = ({ onRouteChange, scheduledCalls = [], onScheduleCall }) => {
   const [jobs, setJobs] = useState(initialJobs);
   const [formData, setFormData] = useState({
     title: '',
@@ -38,6 +41,18 @@ const Industry = ({onRouteChange}) => {
     skills: '',
     description: '',
   });
+
+  // Schedule call modal state
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleTarget, setScheduleTarget] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    candidateName: '',
+    scheduledTime: '',
+  });
+
+  // Active video call state
+  const [activeCallRoom, setActiveCallRoom] = useState(null);
+  const [activeCallJobTitle, setActiveCallJobTitle] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,8 +86,64 @@ const Industry = ({onRouteChange}) => {
     });
   };
 
+  // Open schedule modal for a specific job
+  const openScheduleModal = (job) => {
+    setScheduleTarget(job);
+    setScheduleForm({ candidateName: '', scheduledTime: '' });
+    setShowScheduleModal(true);
+  };
+
+  // Submit scheduled call
+  const handleScheduleSubmit = (e) => {
+    e.preventDefault();
+    if (!scheduleForm.candidateName.trim() || !scheduleForm.scheduledTime) return;
+
+    const newCall = {
+      id: `call-${Date.now()}`,
+      jobId: scheduleTarget.id,
+      jobTitle: scheduleTarget.role,
+      roomID: `call_${scheduleTarget.id}_${Date.now()}`,
+      candidateName: scheduleForm.candidateName,
+      scheduledTime: scheduleForm.scheduledTime,
+    };
+
+    if (onScheduleCall) {
+      onScheduleCall(newCall);
+    }
+
+    setShowScheduleModal(false);
+    setScheduleTarget(null);
+  };
+
+  // Join call as recruiter
+  const handleJoinCall = (call) => {
+    setActiveCallRoom(call.roomID);
+    setActiveCallJobTitle(call.jobTitle);
+  };
+
+  // Get calls for a specific job
+  const getCallsForJob = (jobId) => {
+    return scheduledCalls.filter((c) => c.jobId === jobId);
+  };
+
+  // If recruiter is in a video call, show full-screen call
+  if (activeCallRoom) {
+    return (
+      <VideoCall
+        roomID={activeCallRoom}
+        userID="recruiter_1"
+        userName="Recruiter"
+        onLeave={() => {
+          setActiveCallRoom(null);
+          setActiveCallJobTitle('');
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 min-h-screen">
+    <div className="w-full max-w-7xl mt-20 mx-auto p-4 sm:p-6 min-h-screen">
+      <Navbar onRouteChange={onRouteChange}/>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT COLUMN: Job Postings Table */}
@@ -90,47 +161,106 @@ const Industry = ({onRouteChange}) => {
                   <th className="py-3.5 px-4">Applicants</th>
                   <th className="py-3.5 px-4">Shortlisted</th>
                   <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-6 text-right"></th>
+                  <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {jobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-slate-50/60 transition-colors">
-                    {/* Role Details */}
-                    <td className="py-4 px-6">
-                      <p className="font-bold text-slate-900">{job.role}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{job.typeDetails}</p>
-                    </td>
+                {jobs.map((job) => {
+                  const jobCalls = getCallsForJob(job.id);
+                  return (
+                    <React.Fragment key={job.id}>
+                      <tr className="hover:bg-slate-50/60 transition-colors">
+                        {/* Role Details */}
+                        <td className="py-4 px-6">
+                          <p className="font-bold text-slate-900">{job.role}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">{job.typeDetails}</p>
+                        </td>
 
-                    {/* Applicants */}
-                    <td className="py-4 px-4 font-bold text-slate-900">
-                      {job.applicants}
-                    </td>
+                        {/* Applicants */}
+                        <td className="py-4 px-4 font-bold text-slate-900">
+                          {job.applicants}
+                        </td>
 
-                    {/* Shortlisted */}
-                    <td className="py-4 px-4 text-slate-600">
-                      {job.shortlisted}
-                    </td>
+                        {/* Shortlisted */}
+                        <td className="py-4 px-4 text-slate-600">
+                          {job.shortlisted}
+                        </td>
 
-                    {/* Status Badge */}
-                    <td className="py-4 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        job.status === 'Live'
-                          ? 'bg-emerald-50 text-emerald-600'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {job.status}
-                      </span>
-                    </td>
+                        {/* Status Badge */}
+                        <td className="py-4 px-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            job.status === 'Live'
+                              ? 'bg-emerald-50 text-emerald-600'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {job.status}
+                          </span>
+                        </td>
 
-                    {/* Pipeline Action */}
-                    <td className="py-4 px-6 text-right">
-                      <button className="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-all cursor-pointer">
-                        Pipeline
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        {/* Actions */}
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button className="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-all cursor-pointer">
+                              Pipeline
+                            </button>
+                            {job.status === 'Live' && (
+                              <button
+                                onClick={() => openScheduleModal(job)}
+                                className="px-3 py-1.5 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                                title="Schedule Video Call"
+                              >
+                                <Video size={13} />
+                                <span>Schedule Call</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Scheduled calls for this job */}
+                      {jobCalls.length > 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-3 bg-violet-50/50">
+                            <div className="flex flex-col gap-2">
+                              {jobCalls.map((call) => (
+                                <div
+                                  key={call.id}
+                                  className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 border border-violet-100 shadow-sm"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center">
+                                      <Phone size={14} />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-bold text-slate-800">
+                                        Call with {call.candidateName}
+                                      </p>
+                                      <p className="text-[11px] text-slate-400">
+                                        {new Date(call.scheduledTime).toLocaleString('en-IN', {
+                                          dateStyle: 'medium',
+                                          timeStyle: 'short',
+                                        })}
+                                        {' · '}
+                                        Room: {call.roomID.slice(0, 20)}...
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleJoinCall(call)}
+                                    className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                                  >
+                                    <Video size={13} />
+                                    Join Call
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -255,6 +385,84 @@ const Industry = ({onRouteChange}) => {
         </div>
 
       </div>
+
+      {/* ── Schedule Video Call Modal ── */}
+      {showScheduleModal && scheduleTarget && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-md p-6 relative animate-in">
+            {/* Close */}
+            <button
+              onClick={() => setShowScheduleModal(false)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center">
+                <Video size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Schedule Video Call</h3>
+                <p className="text-xs text-slate-400">
+                  For: <span className="font-semibold text-slate-600">{scheduleTarget.role}</span>
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleScheduleSubmit} className="flex flex-col gap-4">
+              {/* Candidate Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-600">Candidate Name</label>
+                <input
+                  type="text"
+                  value={scheduleForm.candidateName}
+                  onChange={(e) => setScheduleForm((p) => ({ ...p, candidateName: e.target.value }))}
+                  placeholder="e.g. Aarav Sharma"
+                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-slate-800 placeholder-slate-400 transition-all"
+                  required
+                />
+              </div>
+
+              {/* Scheduled Date-Time */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-600">Scheduled Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={scheduleForm.scheduledTime}
+                  onChange={(e) => setScheduleForm((p) => ({ ...p, scheduledTime: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-slate-800 transition-all"
+                  required
+                />
+              </div>
+
+              {/* Info badge */}
+              <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 leading-relaxed">
+                <span className="font-bold">How it works:</span> A unique room link will be created. The student will see this call in their Opportunities page and can join when it's time.
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleModal(false)}
+                  className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Calendar size={14} />
+                  Schedule Call
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

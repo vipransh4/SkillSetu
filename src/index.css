@@ -7,7 +7,6 @@ html, body, #root {
   overflow-x: hidden;
 }
 
-/* Custom Utility in Tailwind v4 */
 .bg-grid-pattern {
   background-size: 30px 30px;
   background-image: 
