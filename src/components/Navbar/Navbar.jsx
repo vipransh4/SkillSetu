@@ -12,7 +12,10 @@ import {
   MapPin, 
   IndianRupee, 
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  User,
+  Settings,
+  ChevronDown
 } from "lucide-react";
 import Logo from "../../../public/hero.png";
 import authService from "../../api/auth";
@@ -25,22 +28,33 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState({ jobs: [], candidates: [], faculty: [] });
   const [activeCategory, setActiveCategory] = useState("primary"); // 'primary' or specific category
   
+  // Profile menu state
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   const searchContainerRef = useRef(null);
+  const profileMenuRef = useRef(null);
 
   // Close dropdown on click outside or escape key
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
         setIsDropdownOpen(false);
+        setIsExpanded(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setIsProfileOpen(false);
       }
     };
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         setIsDropdownOpen(false);
+        setIsExpanded(false);
+        setIsProfileOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -50,6 +64,17 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  const getInitials = (u) => {
+    if (!u) return "U";
+    if (u.first_name) {
+      const f = u.first_name[0] || "";
+      const l = u.last_name ? u.last_name[0] : "";
+      return (f + l).toUpperCase() || u.username?.[0]?.toUpperCase() || "U";
+    }
+    return (u.username?.[0] || "U").toUpperCase();
+  };
+
 
   // Debounced search when query changes
   useEffect(() => {
@@ -133,27 +158,21 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
     switch (role) {
       case "industry":
         return {
-          badge: "Talent Search",
           icon: <Users size={14} className="text-emerald-600" />,
-          bgColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-          placeholder: "Search candidate talent (e.g. React, NIT, Python, 90%+ score)...",
+          placeholder: "Search candidates by skill, college, name, or role...",
           target: "candidates",
         };
       case "academician":
         return {
-          badge: "Academia Search",
           icon: <GraduationCap size={14} className="text-purple-600" />,
-          bgColor: "bg-purple-50 text-purple-700 border-purple-200",
-          placeholder: "Search faculty FDPs, research projects & universities...",
+          placeholder: "Search faculty opportunities, research projects, FDPs...",
           target: "faculty",
         };
       case "student":
       default:
         return {
-          badge: "Job Search",
           icon: <Briefcase size={14} className="text-blue-600" />,
-          bgColor: "bg-blue-50 text-blue-700 border-blue-200",
-          placeholder: "Search jobs, internships & skills (e.g. React, Remote, FullStack)...",
+          placeholder: "Search jobs, internships, companies, or skills...",
           target: "jobs",
         };
     }
@@ -212,81 +231,108 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
     }
   };
 
-  const totalResultsCount = 
-    searchResults.candidates.length + 
-    searchResults.jobs.length + 
-    searchResults.faculty.length;
+  // Strictly gate visible results by active user role
+  const visibleCandidates = currentUser?.role === "industry" ? searchResults.candidates : [];
+  const visibleJobs = searchResults.jobs;
+  const visibleFaculty = (currentUser?.role === "academician" || !currentUser) ? searchResults.faculty : [];
+  const totalResultsCount = visibleCandidates.length + visibleJobs.length + visibleFaculty.length;
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 flex justify-center pt-3 px-2">
-      <div className="w-full max-w-[96%] flex items-center justify-between gap-4 bg-white/90 backdrop-blur-md rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.06)] px-6 py-2.5 border border-slate-200/80">
-        
-        {/* Brand / Logo */}
+    <>
+      {/* Full-screen web background dim overlay when search results are open */}
+      {isDropdownOpen && searchQuery.trim() && (
         <div 
-          className="flex items-center gap-2 shrink-0 cursor-pointer group" 
-          onClick={() => onRouteChange("home")}
-        >
-          <img src={Logo} alt="Skill Setu Logo" className="h-8 w-8 object-contain transition-transform group-hover:scale-105" />
-          <span className="font-bold text-lg text-slate-800 tracking-tight">
-            Skill Setu
-          </span>
-        </div>
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40 transition-opacity duration-150 animate-in fade-in cursor-pointer"
+          onClick={() => {
+            setIsDropdownOpen(false);
+            setIsExpanded(false);
+          }}
+          aria-hidden="true"
+        />
+      )}
 
-        {/* Global Role-Aware Search Bar */}
-        <div className="flex-1 max-w-xl mx-2 sm:mx-4 relative" ref={searchContainerRef}>
-          <form 
-            onSubmit={handleSearchSubmit}
-            className="flex items-center gap-2 bg-slate-100/90 hover:bg-slate-100 rounded-full px-3 sm:px-4 py-2 border border-slate-200/60 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-500/15 transition-all shadow-inner"
+      <nav className="fixed top-0 left-0 w-full z-50 flex justify-center pt-3 px-2 pointer-events-none">
+        <div className="w-full max-w-[96%] flex items-center justify-between gap-4 bg-white/90 backdrop-blur-md rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.06)] px-6 py-2.5 border border-slate-200/80 pointer-events-auto">
+          
+          {/* Brand / Logo */}
+          <div 
+            className="flex items-center gap-2 shrink-0 cursor-pointer group" 
+            onClick={() => onRouteChange("home")}
           >
-            <Search size={17} className="text-slate-400 shrink-0" />
-            
-            {/* Role indicator badge inside search */}
-            <span className={`hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${searchMeta.bgColor}`}>
-              {searchMeta.icon}
-              <span>{searchMeta.badge}</span>
+            <img src={Logo} alt="Skill Setu Logo" className="h-8 w-8 object-contain transition-transform group-hover:scale-105" />
+            <span className="font-bold text-lg text-slate-800 tracking-tight">
+              Skill Setu
             </span>
+          </div>
 
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => searchQuery.trim() && setIsDropdownOpen(true)}
-              placeholder={searchMeta.placeholder}
-              className="bg-transparent outline-none w-full text-xs sm:text-sm placeholder-slate-400 text-slate-700"
-            />
+          {/* Global Role-Aware Search Bar with Fast Fluid Expansion Animation */}
+          <div 
+            className={`relative transition-all duration-200 ease-out z-30 ${
+              isExpanded || isDropdownOpen 
+                ? 'flex-1 max-w-2xl sm:max-w-3xl scale-[1.01]' 
+                : 'flex-1 max-w-md sm:max-w-lg'
+            } mx-2 sm:mx-4`} 
+            ref={searchContainerRef}
+          >
+            <form 
+              onSubmit={handleSearchSubmit}
+              className={`flex items-center gap-2.5 rounded-full px-4 py-2 border transition-all duration-150 ${
+                isExpanded || isDropdownOpen
+                  ? 'bg-white/95 border-blue-500 ring-4 ring-blue-500/15 shadow-[0_12px_36px_rgba(37,99,235,0.14)]'
+                  : 'bg-slate-100/90 hover:bg-slate-100 border-slate-200/60 shadow-inner'
+              }`}
+            >
+              <Search 
+                size={18} 
+                className={`shrink-0 transition-all duration-150 ${
+                  isExpanded || isDropdownOpen ? 'text-blue-600 scale-110' : 'text-slate-400'
+                }`} 
+              />
 
-            {isLoading && (
-              <Loader2 size={16} className="text-blue-500 animate-spin shrink-0" />
-            )}
-
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setIsDropdownOpen(false);
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  setIsExpanded(true);
+                  if (searchQuery.trim()) setIsDropdownOpen(true);
                 }}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer shrink-0"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </form>
+                placeholder={searchMeta.placeholder}
+                className="bg-transparent outline-none w-full text-xs sm:text-sm placeholder-slate-400 text-slate-700"
+              />
 
-          {/* Interactive Search Dropdown Popover */}
-          {isDropdownOpen && searchQuery.trim() && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[75vh] flex flex-col">
-              
-              {/* Dropdown Header & Category Tabs */}
-              <div className="p-3 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between gap-2 text-xs">
-                <span className="font-semibold text-slate-500 flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-blue-500" />
-                  <span>
-                    {totalResultsCount > 0 
-                      ? `Found ${totalResultsCount} result${totalResultsCount > 1 ? 's' : ''}`
-                      : 'Searching...'}
+              {isLoading && (
+                <Loader2 size={16} className="text-blue-500 animate-spin shrink-0" />
+              )}
+
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setIsDropdownOpen(false);
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </form>
+
+            {/* Interactive Search Dropdown Popover with Matching Navbar Glass Background */}
+            {isDropdownOpen && searchQuery.trim() && (
+              <div className="absolute left-0 right-0 top-full mt-2.5 bg-white/90 backdrop-blur-md rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-200/80 overflow-hidden z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150 ease-out origin-top max-h-[75vh] flex flex-col pointer-events-auto">
+                
+                {/* Dropdown Header */}
+                <div className="p-3 bg-white/70 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-slate-600 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-blue-500" />
+                    <span>
+                      {totalResultsCount > 0 
+                        ? `Found ${totalResultsCount} result${totalResultsCount > 1 ? 's' : ''}`
+                        : 'Searching catalog & vectors...'}
+                    </span>
                   </span>
-                </span>
 
                 <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
                   Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono text-[10px] text-slate-600">Enter</kbd> to view all
@@ -298,34 +344,44 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
                 {isLoading && totalResultsCount === 0 ? (
                   <div className="p-8 text-center text-slate-400 flex flex-col items-center gap-2">
                     <Loader2 size={24} className="animate-spin text-blue-500" />
-                    <p className="text-xs font-medium">Scanning verified database...</p>
+                    <p className="text-xs font-medium">Scanning verified database & 3-signal vector index...</p>
                   </div>
                 ) : totalResultsCount === 0 ? (
-                  <div className="p-8 text-center">
-                    <p className="text-sm font-semibold text-slate-700">No matching results found</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {currentUser?.role === "industry"
-                        ? "Try searching candidate skills like React, Python, or college like NIT, IIT."
-                        : "Try searching job titles like Frontend, FullStack, or skills like React, SQL."}
+                  <div className="p-6 text-center">
+                    <p className="text-sm font-semibold text-slate-700">No direct matches found for "{searchQuery}"</p>
+                    <p className="text-xs text-slate-400 mt-1 mb-3">
+                      Try clicking one of these popular keywords:
                     </p>
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                      {['React', 'Python', 'Google', 'Distributed Systems', 'Remote', 'SQL', 'CAD'].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setSearchQuery(tag)}
+                          className="px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-lg transition-colors cursor-pointer"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <>
-                    {/* CANDIDATES RESULTS (Priority for Industry/Recruiter) */}
-                    {searchResults.candidates.length > 0 && (
+                    {/* CANDIDATES RESULTS (Strictly limited to authenticated Recruiters) */}
+                    {currentUser?.role === "industry" && visibleCandidates.length > 0 && (
                       <div className="py-2">
                         <div className="px-3 py-1 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                           <span className="flex items-center gap-1.5 text-emerald-700">
                             <Users size={13} />
                             Candidate Talent Profiles
                           </span>
-                          <span className="text-slate-400">{searchResults.candidates.length} matched</span>
+                          <span className="text-slate-400">{visibleCandidates.length} matched</span>
                         </div>
-                        {searchResults.candidates.map((candidate) => (
+                        {visibleCandidates.map((candidate) => (
                           <div
                             key={candidate.id}
                             onClick={() => handleSelectCandidate(candidate)}
-                            className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                            className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 group hover:translate-x-1"
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <div className={`w-9 h-9 rounded-full ${candidate.avatarBg || 'bg-blue-600'} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm`}>
@@ -346,17 +402,27 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
                                   {candidate.role || candidate.college} · {candidate.college}
                                 </p>
                                 <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                  {candidate.skills?.slice(0, 3).map((s, idx) => (
-                                    <span key={idx} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
-                                      {s}
+                                  {candidate.skills && candidate.skills.length > 0 ? (
+                                    candidate.skills.slice(0, 3).map((s, idx) => (
+                                      <span key={idx} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                                        {s}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 italic">
+                                      No skills listed yet
                                     </span>
-                                  ))}
+                                  )}
                                 </div>
                               </div>
                             </div>
 
                             <div className="text-right shrink-0">
-                              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                candidate.matchScore > 0
+                                  ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                                  : 'text-slate-400 bg-slate-100 border-slate-200'
+                              }`}>
                                 {candidate.matchScore}% Match
                               </span>
                               <p className="text-[11px] text-slate-400 font-medium mt-1">
@@ -368,17 +434,17 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
                       </div>
                     )}
 
-                    {/* OPPORTUNITIES RESULTS (Priority for Students / Candidates) */}
-                    {searchResults.jobs.length > 0 && (
+                    {/* OPPORTUNITIES RESULTS (Shown to Candidates, Students & All Users) */}
+                    {visibleJobs.length > 0 && (
                       <div className="py-2">
                         <div className="px-3 py-1 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                           <span className="flex items-center gap-1.5 text-blue-700">
                             <Briefcase size={13} />
                             Jobs & Internships
                           </span>
-                          <span className="text-slate-400">{searchResults.jobs.length} matched</span>
+                          <span className="text-slate-400">{visibleJobs.length} matched</span>
                         </div>
-                        {searchResults.jobs.map((job) => (
+                        {visibleJobs.map((job) => (
                           <div
                             key={job.id}
                             onClick={() => handleSelectJob(job)}
@@ -419,16 +485,16 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
                     )}
 
                     {/* FACULTY / ACADEMIA RESULTS */}
-                    {searchResults.faculty.length > 0 && (
+                    {visibleFaculty.length > 0 && (
                       <div className="py-2">
                         <div className="px-3 py-1 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                           <span className="flex items-center gap-1.5 text-purple-700">
                             <GraduationCap size={13} />
                             Faculty Internships & Research Projects
                           </span>
-                          <span className="text-slate-400">{searchResults.faculty.length} matched</span>
+                          <span className="text-slate-400">{visibleFaculty.length} matched</span>
                         </div>
-                        {searchResults.faculty.map((fac) => (
+                        {visibleFaculty.map((fac) => (
                           <div
                             key={fac.id}
                             onClick={() => handleSelectFaculty(fac)}
@@ -465,7 +531,7 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
               {totalResultsCount > 0 && (
                 <div 
                   onClick={handleSearchSubmit}
-                  className="p-2.5 bg-slate-50 hover:bg-blue-50 border-t border-slate-100 text-center cursor-pointer transition-colors flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600"
+                  className="p-2.5 bg-white/70 backdrop-blur-md hover:bg-blue-50/80 border-t border-slate-200/60 text-center cursor-pointer transition-colors flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600"
                 >
                   <span>
                     {currentUser?.role === "industry" 
@@ -491,7 +557,7 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
             </button>
           ))}
 
-          {/* IF USER IS LOGGED IN: Show Dynamic Action Button + User Role Pill + Logout */}
+          {/* IF USER IS LOGGED IN: Show Dynamic Action Button + Circular Profile Avatar with Dropdown */}
           {currentUser ? (
             <div className="flex items-center gap-3">
               {uploadOption && (
@@ -503,25 +569,130 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
                 </button>
               )}
 
-              {/* Profile identity pill */}
-              <div className="hidden xl:flex items-center gap-2 pl-2 text-xs text-slate-500 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="truncate max-w-[110px] text-slate-700 font-semibold">
-                  {currentUser.first_name || currentUser.username || "User"}
-                </span>
-                <span className="capitalize px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-600 font-semibold border border-slate-200">
-                  {currentUser.role}
-                </span>
-              </div>
+              {/* Circular Profile Avatar with Popover Menu */}
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  onClick={() => setIsProfileOpen((prev) => !prev)}
+                  className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all cursor-pointer select-none outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                    isProfileOpen ? "ring-2 ring-blue-600 shadow-md scale-105" : "hover:ring-2 hover:ring-slate-300 shadow-sm"
+                  }`}
+                  aria-label="User Profile Menu"
+                  title="User Profile Menu"
+                >
+                  {currentUser.avatar_url ? (
+                    <img
+                      src={currentUser.avatar_url}
+                      alt={currentUser.username}
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-xs sm:text-sm flex items-center justify-center tracking-tight shadow-inner">
+                      {getInitials(currentUser)}
+                    </div>
+                  )}
+                  {/* Online status indicator */}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                </button>
 
-              <button
-                onClick={handleLogoutClick}
-                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
-                title="Sign Out"
-                aria-label="Sign Out"
-              >
-                <LogOut size={18} />
-              </button>
+                {/* Profile Popover Dropdown */}
+                {isProfileOpen && (
+                  <div className="absolute right-0 top-full mt-2.5 w-72 bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
+                    {/* User Header */}
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full shrink-0 overflow-hidden ring-2 ring-slate-100 flex items-center justify-center bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-base shadow-sm">
+                        {currentUser.avatar_url ? (
+                          <img
+                            src={currentUser.avatar_url}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getInitials(currentUser)
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-900 truncate">
+                          {currentUser.first_name
+                            ? `${currentUser.first_name} ${currentUser.last_name || ""}`.trim()
+                            : currentUser.username}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">@{currentUser.username}</p>
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="capitalize px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                            {currentUser.role === "student" ? "Candidate" : currentUser.role}
+                          </span>
+                          {currentUser.is_email_verified && (
+                            <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
+                              <ShieldCheck size={11} /> Verified
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Navigation Options */}
+                    <div className="p-1.5 space-y-0.5 text-sm">
+                      <button
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          onRouteChange("profile");
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
+                      >
+                        <User size={16} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-800">My Profile</p>
+                          <p className="text-[11px] text-slate-400">View & edit profile, skills, academics</p>
+                        </div>
+                      </button>
+
+                      {currentUser.role === "student" && (
+                        <button
+                          onClick={() => {
+                            setIsProfileOpen(false);
+                            onRouteChange("upload-skills");
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
+                        >
+                          <Sparkles size={16} className="text-slate-400 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-800">Digital Portfolio</p>
+                            <p className="text-[11px] text-slate-400">Projects, credentials & test ratings</p>
+                          </div>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          onRouteChange("settings");
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
+                      >
+                        <Settings size={16} className="text-slate-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-800">Settings</p>
+                          <p className="text-[11px] text-slate-400">Notifications, discovery & privacy</p>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Divider & Sign Out */}
+                    <div className="pt-1 mt-1 border-t border-slate-100 p-1.5">
+                      <button
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          handleLogoutClick();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-medium transition-colors text-left cursor-pointer text-xs"
+                      >
+                        <LogOut size={16} className="shrink-0" />
+                        <span className="font-bold">Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             /* IF LOGGED OUT: Show Sign In button */
@@ -535,6 +706,7 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
         </div>
       </div>
     </nav>
+    </>
   );
 };
 

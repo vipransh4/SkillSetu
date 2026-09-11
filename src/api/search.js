@@ -1,337 +1,187 @@
 import apiClient from './client';
-
-// Shared mock opportunities dataset
-export const mockOpportunities = [
-  {
-    id: 'op-1',
-    title: 'Frontend Developer Intern',
-    company: 'TechNova',
-    category: 'SaaS',
-    type: 'Full-Time',
-    logo: 'TN',
-    location: 'Remote',
-    duration: '6 Months',
-    stipend: '₹25,000 / mo',
-    deadline: '30 Oct 2026',
-    matchScore: 91,
-    skills: ['React', 'Git', 'CSS', 'JavaScript'],
-  },
-  {
-    id: 'op-2',
-    title: 'FullStack Developer',
-    company: 'EduSpark',
-    category: 'EdTech',
-    type: 'Job',
-    logo: 'ES',
-    location: 'Remote',
-    duration: 'Full-time',
-    stipend: '₹9-14 LPA',
-    deadline: '28 Oct 2026',
-    matchScore: 88,
-    skills: ['React', 'Node.js', 'MongoDB', 'JavaScript'],
-  },
-  {
-    id: 'op-3',
-    title: 'UI Engineer',
-    company: 'Auralis',
-    category: 'FinTech',
-    type: 'Job',
-    logo: 'AU',
-    location: 'Bangalore',
-    duration: 'Full-time',
-    stipend: '10-15 LPA',
-    deadline: '02 Nov 2026',
-    matchScore: 85,
-    skills: ['React', 'TypeScript', 'CSS', 'Design Systems'],
-  },
-  {
-    id: 'op-4',
-    title: 'Hospital Scheduling System',
-    company: 'MediCore',
-    category: 'HealthTech',
-    type: 'Live Project',
-    logo: 'MC',
-    location: 'Chennai',
-    duration: '10 weeks',
-    stipend: '₹15,000 total',
-    deadline: '18 Oct 2026',
-    matchScore: 80,
-    skills: ['React', 'SQL', 'Problem Solving', 'Teamwork'],
-  },
-  {
-    id: 'op-5',
-    title: 'Data Analyst Intern',
-    company: 'FinEdge',
-    category: 'Analytics',
-    type: 'Internship',
-    logo: 'FE',
-    location: 'Pune',
-    duration: '3 Months',
-    stipend: '₹18,000 / mo',
-    deadline: '20 Oct 2026',
-    matchScore: 82,
-    skills: ['SQL', 'Python', 'Data Analysis', 'Communication'],
-  },
-  {
-    id: 'op-6',
-    title: 'Software Engineer',
-    company: 'Nimbus Labs',
-    category: 'Cloud Services',
-    type: 'Job',
-    logo: 'NL',
-    location: 'Bangalore/Remote',
-    duration: 'Full-time',
-    stipend: '8-12 LPA',
-    deadline: '12 Nov 2026',
-    matchScore: 89,
-    skills: ['Java', 'Data Structures', 'SQL', 'Problem Solving'],
-  },
-  {
-    id: 'op-7',
-    title: 'Cloud Engineering Intern',
-    company: 'Sky-Stack',
-    category: 'DevOps',
-    type: 'Internship',
-    logo: 'SS',
-    location: 'Hyderabad',
-    duration: '6 Months',
-    stipend: '₹30,000 / mo',
-    deadline: '05 Nov 2026',
-    matchScore: 86,
-    skills: ['Cloud Computing', 'Linux', 'Docker', 'Python'],
-  },
-  {
-    id: 'op-8',
-    title: 'Cybersecurity Apprentice',
-    company: 'SecureGrid',
-    category: 'Security',
-    type: 'Apprenticeship',
-    logo: 'SG',
-    location: 'Delhi NCR',
-    duration: '12 Months',
-    stipend: '₹22,000 / mo',
-    deadline: '15 Nov 2026',
-    matchScore: 84,
-    skills: ['Cybersecurity', 'Linux', 'Problem Solving'],
-  },
-];
-
-// Shared mock candidates dataset
-export const mockCandidates = [
-  {
-    id: 'std-1',
-    name: 'Aarav Sharma',
-    avatar: 'AS',
-    avatarBg: 'bg-teal-600',
-    verified: true,
-    college: 'NIT Trichy',
-    skills: ['React', 'Node.js', 'SQL', 'JavaScript'],
-    assessmentScore: 88,
-    matchScore: 94,
-    role: 'Full Stack Engineer',
-  },
-  {
-    id: 'std-2',
-    name: 'Diya Patel',
-    avatar: 'DP',
-    avatarBg: 'bg-purple-600',
-    verified: true,
-    college: 'IIT Madras',
-    skills: ['Python', 'AWS', 'SQL', 'Machine Learning'],
-    assessmentScore: 91,
-    matchScore: 91,
-    role: 'Cloud & AI Engineer',
-  },
-  {
-    id: 'std-3',
-    name: 'Rohan Iyer',
-    avatar: 'RI',
-    avatarBg: 'bg-amber-600',
-    verified: false,
-    college: 'Anna University',
-    skills: ['Java', 'Spring Boot', 'Docker', 'Kubernetes'],
-    assessmentScore: 82,
-    matchScore: 87,
-    role: 'Backend Systems Developer',
-  },
-  {
-    id: 'std-4',
-    name: 'Sneha Kulkarni',
-    avatar: 'SK',
-    avatarBg: 'bg-emerald-600',
-    verified: true,
-    college: 'BITS Pilani',
-    skills: ['React', 'TypeScript', 'Figma', 'UI/UX Design'],
-    assessmentScore: 86,
-    matchScore: 85,
-    role: 'Frontend & Product Designer',
-  },
-  {
-    id: 'std-5',
-    name: 'Arjun Mehta',
-    avatar: 'AM',
-    avatarBg: 'bg-red-600',
-    verified: false,
-    college: 'VIT Vellore',
-    skills: ['Node.js', 'MongoDB', 'Redis', 'Express'],
-    assessmentScore: 79,
-    matchScore: 81,
-    role: 'API & Microservices Engineer',
-  },
-];
-
-// Shared mock faculty opportunities dataset
-export const mockFacultyOpportunities = [
-  {
-    id: 'fac-1',
-    title: 'AI & Deep Learning Faculty Development Program',
-    company: 'TechNova Research',
-    category: 'FDP',
-    type: 'Residency',
-    location: 'Remote / Virtual',
-    duration: '4 Weeks',
-    stipend: '₹40,000 Grant',
-    deadline: '25 Oct 2026',
-    matchScore: 95,
-    skills: ['Deep Learning', 'PyTorch', 'Generative AI', 'Curriculum Design'],
-  },
-  {
-    id: 'fac-2',
-    title: 'EV Battery Management Collaborative Research Project',
-    company: 'Nimbus Labs',
-    category: 'Research',
-    type: 'Research Project',
-    location: 'Bangalore / Hybrid',
-    duration: '6 Months',
-    stipend: '₹2,50,000 Funding',
-    deadline: '15 Nov 2026',
-    matchScore: 92,
-    skills: ['Matlab', 'Simulink', 'IoT Sensors', 'Thermal Dynamics'],
-  },
-  {
-    id: 'fac-3',
-    title: 'DevOps & Cloud Architecture Industry Training',
-    company: 'Sky-Stack Enterprise',
-    category: 'Industrial Training',
-    type: 'Workshop',
-    location: 'Hyderabad',
-    duration: '2 Weeks',
-    stipend: '₹25,000 Honorarium',
-    deadline: '08 Nov 2026',
-    matchScore: 89,
-    skills: ['Docker', 'Kubernetes', 'CI/CD', 'AWS Cloud'],
-  },
-  {
-    id: 'fac-4',
-    title: 'Capital Markets & Algorithmic Trading Fellowship',
-    company: 'FinEdge Financial',
-    category: 'Consultancy',
-    type: 'Consultancy',
-    location: 'Mumbai / Hybrid',
-    duration: '3 Months',
-    stipend: '₹1,20,000 Grant',
-    deadline: '30 Nov 2026',
-    matchScore: 87,
-    skills: ['Financial Econometrics', 'Python', 'Risk Modeling', 'Data Analysis'],
-  },
-];
+import authService from './auth';
 
 export const searchService = {
   /**
-   * Search job opportunities with backend 3-signal fusion or fallback
+   * Search active job listings via 3-signal fusion endpoint
    */
   async searchJobs(query = '', limit = 10) {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     try {
       const response = await apiClient.get('/students/jobs/search', {
-        params: { q: query, limit },
+        params: { q, limit },
       });
-      if (response.data?.listings && response.data.listings.length > 0) {
-        return response.data.listings.map((item) => ({
+      const items = response.data?.results || response.data?.listings || [];
+      if (Array.isArray(items)) {
+        return items.map((item) => ({
           id: String(item.id),
           title: item.title,
-          company: item.company_name || 'Partner Company',
+          company: item.company_name || 'Enterprise Partner',
           category: item.role_type || 'Job',
-          type: item.role_type || 'Full-Time',
+          type: item.role_type === 'INTERNSHIP' ? 'Internship' : (item.role_type === 'FULL_TIME' ? 'Full-Time' : (item.role_type || 'Job')),
           logo: (item.company_name || 'SS').substring(0, 2).toUpperCase(),
           location: item.location || (item.is_remote ? 'Remote' : 'On-Site'),
           duration: item.tenure || 'Flexible',
           stipend: item.stipend_or_ctc || 'Competitive',
-          deadline: item.application_deadline || 'Open',
-          matchScore: Math.round((item.fusion_score || item.deterministic_score || 0.85) * 100),
-          skills: item.matched_skills || item.required_skills || [],
+          deadline: item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open',
+          matchScore: Math.round((item.match_score || item.fusion_score || 0.88) * 100),
+          skills: item.matched_skills?.length ? item.matched_skills : (item.required_skills || []),
         }));
       }
-    } catch {
-      // Fallback to client-side search
+    } catch (err) {
+      console.warn('Jobs search error, falling back to feed', err);
+      // Fallback: try loading live feed
+      try {
+        const feedRes = await apiClient.get('/students/jobs/feed', { params: { q } });
+        const list = feedRes.data?.jobs || feedRes.data?.results || [];
+        return list.slice(0, limit).map((item) => ({
+          id: String(item.id),
+          title: item.title,
+          company: item.company_name || 'Enterprise Partner',
+          category: item.role_type || 'Job',
+          type: item.role_type === 'INTERNSHIP' ? 'Internship' : 'Full-Time',
+          logo: (item.company_name || 'SS').substring(0, 2).toUpperCase(),
+          location: item.location || (item.is_remote ? 'Remote' : 'On-Site'),
+          duration: item.tenure || 'Flexible',
+          stipend: item.stipend_or_ctc || 'Competitive',
+          deadline: item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open',
+          matchScore: 90,
+          skills: item.required_skills || [],
+        }));
+      } catch {
+        return [];
+      }
     }
-
-    if (!q) return mockOpportunities.slice(0, limit);
-
-    return mockOpportunities
-      .filter((op) => {
-        return (
-          op.title.toLowerCase().includes(q) ||
-          op.company.toLowerCase().includes(q) ||
-          op.location.toLowerCase().includes(q) ||
-          op.skills.some((s) => s.toLowerCase().includes(q))
-        );
-      })
-      .slice(0, limit);
+    return [];
   },
 
   /**
-   * Search candidate talent with backend 3-signal recruiter search or fallback
+   * Search candidates - STRICTLY RESTRICTED TO RECRUITERS.
+   * Candidates and unauthenticated users receive an empty array [].
    */
   async searchCandidates(query = '', limit = 10) {
-    const q = query.trim().toLowerCase();
-    try {
-      const response = await apiClient.get('/students/search', {
-        params: { q: query, limit },
-      });
-      if (response.data?.results && response.data.results.length > 0) {
-        return response.data.results.map((c) => ({
-          id: String(c.id || c.student_id),
-          name: c.name || c.username || `Candidate #${c.student_id || c.id}`,
-          avatar: (c.name || c.username || 'CA').substring(0, 2).toUpperCase(),
-          avatarBg: 'bg-blue-600',
-          verified: !!c.is_verified,
-          college: c.institution || 'Verified University',
-          skills: c.skills_matched || c.top_skills || [],
-          assessmentScore: Math.round(c.confidence_score || c.assessment_score || 85),
-          matchScore: Math.round((c.fusion_score || c.fit_score || 0.88) * 100),
-          role: c.current_designation || c.degree || 'Candidate',
-        }));
-      }
-    } catch {
-      // Fallback to client-side candidate search
+    const user = authService.getUser();
+    
+    // Privacy & Role Gate: Candidates NEVER see other candidate profiles
+    if (!user || user.role !== 'industry') {
+      return [];
     }
 
-    if (!q) return mockCandidates.slice(0, limit);
+    const q = query.trim();
+    try {
+      const response = await apiClient.get('/students/search', {
+        params: { q, limit },
+      });
+      const items = response.data?.results || [];
+      if (Array.isArray(items)) {
+        return items
+          .map((c) => {
+            const allSkills = Object.keys(c.skills_matrix || {});
+            const fullSkills = (c.raw_extracted_skills && c.raw_extracted_skills.length) 
+              ? c.raw_extracted_skills 
+              : (allSkills.length ? allSkills : (c.matched_skills || []));
 
-    return mockCandidates
-      .filter((c) => {
-        return (
-          c.name.toLowerCase().includes(q) ||
-          c.college.toLowerCase().includes(q) ||
-          c.role.toLowerCase().includes(q) ||
-          c.skills.some((s) => s.toLowerCase().includes(q))
-        );
-      })
-      .slice(0, limit);
+            // Strict skill-based matching: 0 skills or 0 match -> strictly 0% Match
+            let calculatedMatch = 0;
+            if (fullSkills.length === 0) {
+              calculatedMatch = 0;
+            } else if (typeof c.final_score === 'number' && c.final_score > 0) {
+              calculatedMatch = Math.min(100, Math.round(c.final_score * 100));
+            } else if (typeof c.fusion_score === 'number' && c.fusion_score > 0) {
+              calculatedMatch = Math.min(100, Math.round(c.fusion_score * 100));
+            } else {
+              calculatedMatch = 0;
+            }
+
+            return {
+              id: String(c.id || c.student_id),
+              name: c.name || (c.username ? c.username.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : `Candidate #${c.student_id || c.id}`),
+              username: c.username,
+              avatar: (c.name || c.username || 'CA').substring(0, 2).toUpperCase(),
+              avatarBg: c.is_verified ? 'bg-blue-600' : 'bg-slate-700',
+              verified: !!c.is_verified,
+              college: c.institution || 'Verified University',
+              department: c.department || 'Engineering',
+              degree: c.degree || '',
+              skills: fullSkills,
+              matchedSkills: c.matched_skills || [],
+              assessmentScore: Math.round(c.overall_confidence_score || c.confidence_score || 0),
+              matchScore: calculatedMatch,
+              role: c.inferred_sector || c.department || c.current_designation || 'Candidate',
+              bio: c.bio || '',
+              experience: c.experience_years || 0,
+              github: c.github_handle || '',
+              shortlisted: false,
+            };
+          })
+          .filter((candidate) => !q || candidate.matchScore > 0 || (candidate.skills && candidate.skills.length > 0));
+      }
+    } catch (err) {
+      console.warn('Candidate search error, falling back to roster', err);
+      // Fallback to roster
+      try {
+        const rosterRes = await apiClient.get('/students/');
+        if (Array.isArray(rosterRes.data)) {
+          const queryWords = q.toLowerCase().split(/\s+/).filter(Boolean);
+          const filtered = rosterRes.data.filter((p) => {
+            const rawSkills = p.raw_extracted_skills?.length ? p.raw_extracted_skills : Object.keys(p.skills_matrix || {});
+            if (rawSkills.length === 0) return false; // 0 skills -> no match
+            return !q || rawSkills.some(s => queryWords.some(qw => s.toLowerCase().includes(qw))) || p.username?.toLowerCase().includes(q.toLowerCase());
+          });
+
+          return filtered.slice(0, limit).map((p) => {
+            const allSkills = Object.keys(p.skills_matrix || {});
+            const fullSkills = (p.raw_extracted_skills && p.raw_extracted_skills.length) ? p.raw_extracted_skills : (allSkills.length ? allSkills : []);
+            let calculatedMatch = 0;
+            if (fullSkills.length === 0) {
+              calculatedMatch = 0;
+            } else if (q) {
+              const matchedCount = fullSkills.filter(s => queryWords.some(qw => s.toLowerCase().includes(qw))).length;
+              calculatedMatch = matchedCount > 0 ? Math.min(100, Math.round((matchedCount / queryWords.length) * 85)) : 0;
+            } else {
+              calculatedMatch = Math.round(p.profile_strength_score || 0);
+            }
+
+            return {
+              id: String(p.id),
+              name: p.username ? p.username.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : `Candidate #${p.id}`,
+              username: p.username,
+              avatar: (p.username || 'CA').substring(0, 2).toUpperCase(),
+              avatarBg: p.is_verified ? 'bg-blue-600' : 'bg-slate-700',
+              verified: !!p.is_verified,
+              college: p.institution || 'Verified University',
+              department: p.department || 'Engineering',
+              degree: p.degree || '',
+              skills: fullSkills,
+              matchedSkills: [],
+              assessmentScore: Math.round(p.overall_confidence_score || 0),
+              matchScore: calculatedMatch,
+              role: p.department || p.current_designation || 'Candidate',
+              bio: p.bio || '',
+              experience: p.experience_years || 0,
+              github: p.github_handle || '',
+              shortlisted: false,
+            };
+          });
+        }
+      } catch {
+        return [];
+      }
+    }
+    return [];
   },
 
   /**
-   * Search faculty opportunities & institutions with backend or fallback
+   * Search faculty opportunities & institutional initiatives
    */
   async searchFaculty(query = '', limit = 10) {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     try {
       const response = await apiClient.get('/institutions/faculty/opportunities', {
-        params: { q: query },
+        params: { q },
       });
-      if (response.data && response.data.length > 0) {
-        return response.data.map((item) => ({
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        return response.data.slice(0, limit).map((item) => ({
           id: String(item.id),
           title: item.title,
           company: item.company_name || 'Academic Institution',
@@ -340,30 +190,22 @@ export const searchService = {
           location: item.location || (item.is_remote ? 'Remote' : 'On-Site'),
           duration: item.tenure || 'Flexible',
           stipend: item.stipend_or_ctc || 'Grant Provided',
-          deadline: item.application_deadline || 'Open',
-          matchScore: 90,
+          deadline: item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open',
+          matchScore: 92,
           skills: item.required_skills || [],
         }));
       }
     } catch {
       // Fallback
     }
-
-    if (!q) return mockFacultyOpportunities.slice(0, limit);
-
-    return mockFacultyOpportunities
-      .filter((item) => {
-        return (
-          item.title.toLowerCase().includes(q) ||
-          item.company.toLowerCase().includes(q) ||
-          item.skills.some((s) => s.toLowerCase().includes(q))
-        );
-      })
-      .slice(0, limit);
+    return [];
   },
 
   /**
-   * Universal role-aware search query
+   * Universal role-aware search dispatcher:
+   * - Students / Candidates / Guests: ONLY search and see Job Listings & Opportunities. Never candidates.
+   * - Recruiters (industry): Search candidate talent and jobs.
+   * - Academicians: Search faculty opportunities and institutions.
    */
   async searchByRole(query, userRole = 'student') {
     const q = query.trim();
@@ -372,16 +214,19 @@ export const searchService = {
     }
 
     if (userRole === 'industry') {
+      // Recruiter: Searches candidates first, with secondary matching in job postings
       const candidates = await this.searchCandidates(q, 6);
       const jobs = await this.searchJobs(q, 4);
       return { candidates, jobs, faculty: [] };
     } else if (userRole === 'academician') {
+      // Academician: Searches faculty programs and jobs
       const faculty = await this.searchFaculty(q, 6);
       const jobs = await this.searchJobs(q, 4);
       return { faculty, jobs, candidates: [] };
     } else {
-      // student / guest
-      const jobs = await this.searchJobs(q, 6);
+      // Student / Candidate / Guest:
+      // STRICT ISOLATION: Candidates NEVER see other candidates. Only job listings are shown!
+      const jobs = await this.searchJobs(q, 8);
       return { jobs, candidates: [], faculty: [] };
     }
   },

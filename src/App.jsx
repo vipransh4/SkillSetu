@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import Home from './components/Home/Home';
 import Navbar from './components/Navbar/Navbar';
 import SignIn from './components/SignIn/SignIn';
@@ -9,6 +10,7 @@ import Students from './components/Students/Students';
 import Industry from './components/Uploading/Industry';
 import Acadmecian from './components/Uploading/Acadmecian';
 import StudentPortfolio from './components/Uploading/StudentPortfolio';
+import Profile from './components/Profile/Profile';
 import authService from './api/auth';
 import './App.css';
 
@@ -16,6 +18,7 @@ function App() {
   const [route, setRoute] = useState('home');
   const [user, setUser] = useState(() => authService.getUser());
   const [searchParams, setSearchParams] = useState({ query: '', selectedId: null });
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
   useEffect(() => {
     const token = authService.getToken();
@@ -89,7 +92,7 @@ function App() {
   };
 
   const showNavbar = route !== 'signin' && route !== 'register';
-  const isBannerVisible = showNavbar && user && !user.is_email_verified && route !== 'verify-email';
+  const isBannerVisible = showNavbar && user && !user.is_email_verified && route !== 'verify-email' && !isBannerDismissed;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -105,19 +108,29 @@ function App() {
 
       {isBannerVisible && (
         <div className="fixed top-[74px] left-0 right-0 z-40 flex justify-center px-4">
-          <div className="w-full max-w-4xl bg-amber-500/10 backdrop-blur-md border border-amber-300 text-amber-900 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs sm:text-sm shadow-sm">
+          <div className="w-full max-w-4xl bg-amber-500/10 backdrop-blur-md border border-amber-300 text-amber-900 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs sm:text-sm shadow-sm animate-in fade-in duration-200">
             <div className="flex items-center gap-2 min-w-0">
               <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
               <p className="truncate">
                 Please verify your email address (<strong>{user.email}</strong>) to complete your profile verification.
               </p>
             </div>
-            <button
-              onClick={() => handleRouteChange('verify-email')}
-              className="ml-3 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs transition-colors shrink-0 cursor-pointer shadow-sm active:scale-95"
-            >
-              Verify Email
-            </button>
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              <button
+                onClick={() => handleRouteChange('verify-email')}
+                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs transition-colors shrink-0 cursor-pointer shadow-sm active:scale-95"
+              >
+                Verify Email
+              </button>
+              <button
+                onClick={() => setIsBannerDismissed(true)}
+                className="p-1 text-amber-800/60 hover:text-amber-950 hover:bg-amber-500/20 rounded-lg transition-colors cursor-pointer"
+                title="Dismiss notice"
+                aria-label="Dismiss notice"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -134,11 +147,19 @@ function App() {
         )}
 
         {(route === 'students' || route === 'candidates') && (
-          <Students 
-            onRouteChange={handleRouteChange} 
-            initialSearch={searchParams.query}
-            initialSelectedId={searchParams.selectedId}
-          />
+          user?.role === 'industry' ? (
+            <Students 
+              onRouteChange={handleRouteChange} 
+              initialSearch={searchParams.query}
+              initialSelectedId={searchParams.selectedId}
+            />
+          ) : (
+            <Opportunities 
+              onRouteChange={handleRouteChange} 
+              initialSearch={searchParams.query}
+              initialSelectedId={searchParams.selectedId}
+            />
+          )
         )}
         
         {route === 'signin' && (
@@ -158,6 +179,24 @@ function App() {
             user={user}
             onVerificationSuccess={handleVerificationSuccess}
             onRouteChange={handleRouteChange}
+          />
+        )}
+        
+        {route === 'profile' && (
+          <Profile 
+            onRouteChange={handleRouteChange}
+            user={user}
+            onUserUpdate={handleVerificationSuccess}
+            initialTab="overview"
+          />
+        )}
+
+        {route === 'settings' && (
+          <Profile 
+            onRouteChange={handleRouteChange}
+            user={user}
+            onUserUpdate={handleVerificationSuccess}
+            initialTab="settings"
           />
         )}
         

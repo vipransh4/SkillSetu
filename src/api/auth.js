@@ -138,6 +138,23 @@ export const authService = {
   },
 
   /**
+   * Update the currently authenticated user's core profile (username, first_name, last_name, avatar_url)
+   */
+  async updateCurrentUser(payload) {
+    const response = await apiClient.put('/auth/me', payload);
+    const data = response.data;
+    const savedUser = this.getUser() || {};
+    const updatedUser = {
+      ...savedUser,
+      ...data,
+      role: toFrontendRole(data.role),
+      backend_role: data.role,
+    };
+    sessionStorage.setItem('skillsetu_user', JSON.stringify(updatedUser));
+    return updatedUser;
+  },
+
+  /**
    * Get JWT access token from sessionStorage
    */
   getToken() {
