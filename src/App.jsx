@@ -20,6 +20,12 @@ function App() {
   const [searchParams, setSearchParams] = useState({ query: '', selectedId: null });
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
+  const [scheduledCalls, setScheduledCalls] = useState([]);
+  
+  const addScheduledCall = (call) => {
+    setScheduledCalls((prev) => [...prev, call]);
+  };
+  
   useEffect(() => {
     const token = authService.getToken();
     if (token) {
@@ -93,9 +99,9 @@ function App() {
 
   const showNavbar = route !== 'signin' && route !== 'register';
   const isBannerVisible = showNavbar && user && !user.is_email_verified && route !== 'verify-email' && !isBannerDismissed;
-
+  const isHeroRoute = route === 'home';
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="relative min-h-screen w-full overflow-x-hidden">
       {showNavbar && (
         <Navbar
           onRouteChange={handleRouteChange}
@@ -107,7 +113,7 @@ function App() {
       )}
 
       {isBannerVisible && (
-        <div className="fixed top-[74px] left-0 right-0 z-40 flex justify-center px-4">
+        <div className="fixed top-20 left-0 right-0 z-40 flex justify-center px-4">
           <div className="w-full max-w-4xl bg-amber-500/10 backdrop-blur-md border border-amber-300 text-amber-900 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs sm:text-sm shadow-sm animate-in fade-in duration-200">
             <div className="flex items-center gap-2 min-w-0">
               <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
@@ -135,7 +141,7 @@ function App() {
         </div>
       )}
 
-      <main className={showNavbar ? (isBannerVisible ? "pt-32" : "pt-20") : ""}>
+      <main className={showNavbar ? (isHeroRoute ? "pt-0" :isBannerVisible ? "pt-32" : "pt-20") : ""}>
         {route === 'home' && <Home onRouteChange={handleRouteChange} />}
         
         {route === 'opportunities' && (
@@ -205,7 +211,7 @@ function App() {
         {route === 'post-jobs' && <Industry onRouteChange={handleRouteChange} />}
 
         {/* Fallback handlers for learning / assessment routes */}
-        {route === 'learning' && (
+        {route === 'opportunity' && (
           user?.role === 'academician' 
             ? <Acadmecian onRouteChange={handleRouteChange} />
             : <Opportunities onRouteChange={handleRouteChange} initialSearch="Learning" />
@@ -215,7 +221,7 @@ function App() {
             ? <StudentPortfolio onRouteChange={handleRouteChange} />
             : (user?.role === 'industry' 
                 ? <Students onRouteChange={handleRouteChange} /> 
-                : <Opportunities onRouteChange={handleRouteChange} initialSearch="Assessment" />)
+                : <Home onRouteChange={handleRouteChange} initialSearch="Assessment" />)
         )}
       </main>
     </div>

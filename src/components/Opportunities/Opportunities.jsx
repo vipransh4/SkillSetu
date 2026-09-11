@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   MapPin, 
   Timer, 
@@ -10,123 +10,209 @@ import {
   ArrowLeft, 
   Check, 
   Sparkles,
-  Loader2,
-  Building,
-  X
+  Video,
+  Phone
 } from 'lucide-react';
-import apiClient from '../../api/client';
-import searchService from '../../api/search';
+import Navbar from '../Navbar/Navbar';
+import VideoCall from '../Video/VideoCall';
 
-const Opportunities = ({ 
-  onRouteChange, 
-  initialSearch = '', 
-  initialSelectedId = null 
-}) => {
-  const [opportunities, setOpportunities] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState(initialSearch);
+const initialOpportunities = [
+  {
+    id: 'op-1',
+    title: 'Frontend Developer Intern',
+    company: 'TechNova',
+    category: 'SaaS',
+    type: 'Full-Time',
+    logo: 'TN',
+    location: 'Remote',
+    duration: '6 Months',
+    stipend: '₹25,000 / mo',
+    deadline: '30 Oct 2026',
+    matchScore: 91,
+    skills: ['React', 'Git', 'CSS', 'JavaScript'],
+    about: 'Join the TechNova product team and build customer-facing interfaces used by 40,000+ businesses. You will work alongside senior engineers and designers in a fast, review-driven environment.',
+    responsibilities: [
+      'Build and maintain responsive React components',
+      'Collaborate with designers on the design system',
+      'Write unit tests and participate in code reviews',
+      'Improve page performance and accessibility'
+    ],
+    qualifications: [
+      'Pursuing B.E./B.Tech in CS or related field',
+      'Strong fundamentals in JavaScript and the DOM',
+      'Portfolio of personal or academic projects'
+    ]
+  },
+  {
+    id: 'op-2',
+    title: 'FullStack Developer',
+    company: 'EduSpark',
+    category: 'EdTech',
+    type: 'Job',
+    logo: 'ES',
+    location: 'Remote',
+    duration: 'Full-time',
+    stipend: '₹9-14 LPA',
+    deadline: '28 Oct 2026',
+    matchScore: 88,
+    skills: ['React', 'Node.js', 'MongoDB', 'JavaScript'],
+    about: 'EduSpark is building the next generation of interactive learning tools. We are looking for a FullStack Developer to help scale our platform features.',
+    responsibilities: [
+      'Develop scalable APIs using Node.js and Express',
+      'Integrate MongoDB pipelines for analytics dashboards',
+      'Ensure seamless UX across frontend and backend connections'
+    ],
+    qualifications: [
+      'Strong knowledge of React and Node.js backend integration',
+      'Experience working with RESTful APIs and databases'
+    ]
+  },
+  {
+    id: 'op-3',
+    title: 'UI Engineer',
+    company: 'Auralis',
+    category: 'FinTech',
+    type: 'Job',
+    logo: 'AU',
+    location: 'Bangalore',
+    duration: 'Full-time',
+    stipend: '10-15 LPA',
+    deadline: '02 Nov 2026',
+    matchScore: 85,
+    skills: ['React', 'TypeScript', 'CSS', 'Design Systems'],
+    about: 'Auralis is crafting high-fidelity design systems for modern financial web products.',
+    responsibilities: [
+      'Architect micro-frontend web design components',
+      'Maintain system UI consistency across multi-tier applications'
+    ],
+    qualifications: [
+      'Expertise in CSS, Tailwind, and component systems',
+      'Proficiency in TypeScript and React ecosystem'
+    ]
+  },
+  {
+    id: 'op-4',
+    title: 'Hospital Scheduling System',
+    company: 'MediCore',
+    category: 'HealthTech',
+    type: 'Live Project',
+    logo: 'MC',
+    location: 'Chennai',
+    duration: '10 weeks',
+    stipend: '₹15,000 total',
+    deadline: '18 Oct 2026',
+    matchScore: 80,
+    skills: ['React', 'SQL', 'Problem Solving', 'Teamwork'],
+    about: 'MediCore is creating an agile booking system to manage real-time patient queue allocations across regional clinics.',
+    responsibilities: [
+      'Build responsive UI screens for scheduling',
+      'Connect frontend state to SQL database queries'
+    ],
+    qualifications: [
+      'Basic database normalization and React state management skills'
+    ]
+  },
+  {
+    id: 'op-5',
+    title: 'Data Analyst Intern',
+    company: 'FinEdge',
+    category: 'Analytics',
+    type: 'Internship',
+    logo: 'FE',
+    location: 'Pune',
+    duration: '3 Months',
+    stipend: '₹18,000 / mo',
+    deadline: '20 Oct 2026',
+    matchScore: 82,
+    skills: ['SQL', 'Python', 'Data Analysis', 'Communication'],
+    about: 'Analyze real-time market movement datasets and transform complex transactional information into actionable insights.',
+    responsibilities: [
+      'Run query pipelines on financial databases',
+      'Create visual dashboards for stakeholders'
+    ],
+    qualifications: [
+      'Familiarity with SQL joins, aggregations, and Python Pandas'
+    ]
+  },
+  {
+    id: 'op-6',
+    title: 'Software Engineer',
+    company: 'Nimbus Labs',
+    category: 'Cloud Services',
+    type: 'Job',
+    logo: 'NL',
+    location: 'Bangalore/Remote',
+    duration: 'Full-time',
+    stipend: '8-12 LPA',
+    deadline: '12 Nov 2026',
+    matchScore: 89,
+    skills: ['Java', 'Data Structures', 'SQL', 'Problem Solving'],
+    about: 'Build resilient backends capable of serving high-concurrency microservices.',
+    responsibilities: [
+      'Write clean, maintainable Java code',
+      'Optimize algorithmic runtime for data-intensive services'
+    ],
+    qualifications: [
+      'Solid foundations in OOP, Data Structures, and SQL'
+    ]
+  },
+  {
+    id: 'op-7',
+    title: 'Cloud Engineering Intern',
+    company: 'Sky-Stack',
+    category: 'DevOps',
+    type: 'Internship',
+    logo: 'SS',
+    location: 'Hyderabad',
+    duration: '6 Months',
+    stipend: '₹30,000 / mo',
+    deadline: '05 Nov 2026',
+    matchScore: 86,
+    skills: ['Cloud Computing', 'Linux', 'Docker', 'Python'],
+    about: 'Automate infrastructure deployment scripts and manage containerized microservice deployments.',
+    responsibilities: [
+      'Build container builds using Docker',
+      'Monitor cloud metrics and optimize build workflows'
+    ],
+    qualifications: [
+      'Working knowledge of Linux CLI and basic containerization'
+    ]
+  },
+  {
+    id: 'op-8',
+    title: 'Cybersecurity Apprentice',
+    company: 'SecureGrid',
+    category: 'Security',
+    type: 'Apprenticeship',
+    logo: 'SG',
+    location: 'Delhi NCR',
+    duration: '12 Months',
+    stipend: '₹22,000 / mo',
+    deadline: '15 Nov 2026',
+    matchScore: 84,
+    skills: ['Cybersecurity', 'Linux', 'Problem Solving'],
+    about: 'Learn real-world threat detection, system hardening, and network vulnerability assessments.',
+    responsibilities: [
+      'Monitor access logs and identify anomalous security events',
+      'Assist senior engineers with audit reports'
+    ],
+    qualifications: [
+      'Understanding of networking protocols and Linux commands'
+    ]
+  }
+];
+
+const Opportunities = ({ onRouteChange, opportunitiesList = initialOpportunities, scheduledCalls = [] }) => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
+  
+  // Track applied opportunities by ID
   const [appliedIds, setAppliedIds] = useState([]);
 
-  // Sync incoming search query from Navbar search
-  useEffect(() => {
-    if (initialSearch !== undefined) {
-      setSearchTerm(initialSearch);
-    }
-  }, [initialSearch]);
-
-  
-  useEffect(() => {
-    let isMounted = true;
-    const fetchJobs = async () => {
-      setIsLoading(true);
-      const q = searchTerm.trim();
-      try {
-        if (q) {
-          const list = await searchService.searchJobs(q, 30);
-          if (isMounted) {
-            const mapped = list.map((l) => ({
-              ...l,
-              about: l.about || `Join ${l.company || 'the team'} as a ${l.title} and work on high-impact production systems.`,
-              responsibilities: [
-                'Design, implement, and maintain high-quality production components and services',
-                'Collaborate closely with technical leadership and cross-functional teams',
-                'Ensure system scalability, code reviews, and test-driven reliability',
-                'Contribute to sprint goals and customer-facing delivery milestones',
-              ],
-              qualifications: [
-                'Pursuing or completed degree in Engineering, Computer Science, or related field',
-                `Familiarity with core technical stack: ${(l.skills || []).slice(0, 3).join(', ') || 'software development'}`,
-                'Strong analytical problem-solving skills and passion for building scalable systems',
-              ]
-            }));
-            setOpportunities(mapped);
-          }
-        } else {
-          const response = await apiClient.get('/students/jobs/feed');
-          const list = response.data?.jobs || response.data?.results || [];
-          if (Array.isArray(list) && isMounted) {
-            const mapped = list.map((l) => ({
-              id: String(l.id),
-              title: l.title,
-              company: l.company_name || 'Enterprise Partner',
-              category: l.role_type || 'Job',
-              type: l.role_type === 'INTERNSHIP' 
-                ? 'Internship' 
-                : (l.role_type === 'FULL_TIME' ? 'Full-Time' : (l.role_type || 'Job')),
-              logo: (l.company_name || 'SS').substring(0, 2).toUpperCase(),
-              location: l.location || (l.is_remote ? 'Remote' : 'On-Site'),
-              duration: l.tenure || 'Flexible',
-              stipend: l.stipend_or_ctc || 'Competitive',
-              deadline: l.application_deadline 
-                ? new Date(l.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) 
-                : 'Open Application',
-              matchScore: 92,
-              skills: l.required_skills || [],
-              about: l.description || `Join ${l.company_name || 'the team'} as a ${l.title} and work on high-impact production systems.`,
-              responsibilities: [
-                'Design, implement, and maintain high-quality production components and services',
-                'Collaborate closely with technical leadership and cross-functional teams',
-                'Ensure system scalability, code reviews, and test-driven reliability',
-                'Contribute to sprint goals and customer-facing delivery milestones',
-              ],
-              qualifications: [
-                'Pursuing or completed degree in Engineering, Computer Science, or related field',
-                `Familiarity with core technical stack: ${(l.required_skills || []).slice(0, 3).join(', ') || 'software development'}`,
-                'Strong analytical problem-solving skills and passion for building scalable systems',
-              ]
-            }));
-            setOpportunities(mapped);
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to load live jobs feed from backend', err);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(() => {
-      fetchJobs();
-    }, 200);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(debounceTimer);
-    };
-  }, [searchTerm]);
-
-  // Sync pre-selected opportunity if ID passed from Navbar search result click
-  useEffect(() => {
-    if (initialSelectedId && opportunities.length > 0) {
-      const found = opportunities.find((op) => String(op.id) === String(initialSelectedId));
-      if (found) {
-        setSelectedOpportunity(found);
-      }
-    }
-  }, [initialSelectedId, opportunities]);
+  // Active video call state (student joining a call)
+  const [activeCallRoom, setActiveCallRoom] = useState(null);
 
   const handleApply = (id) => {
     if (!appliedIds.includes(id)) {
@@ -134,8 +220,20 @@ const Opportunities = ({
     }
   };
 
+  // Get scheduled calls that match an opportunity's title
+  const getCallsForOpportunity = (op) => {
+    return scheduledCalls.filter(
+      (call) => call.jobTitle?.toLowerCase() === op.title?.toLowerCase()
+    );
+  };
+
   const filteredOpportunities = useMemo(() => {
-    return opportunities.filter((op) => {
+    return opportunitiesList.filter((op) => {
+      const matchesSearch =
+        op.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        op.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        op.skills.some((s) => s.toLowerCase().includes(searchTerm.toLowerCase()));
+
       const matchesType = selectedType === 'All' || op.type === selectedType;
       const matchesLocation =
         selectedLocation === 'All' ||
@@ -143,9 +241,9 @@ const Opportunities = ({
           ? op.location.toLowerCase().includes('remote')
           : !op.location.toLowerCase().includes('remote'));
 
-      return matchesType && matchesLocation;
+      return matchesSearch && matchesType && matchesLocation;
     });
-  }, [opportunities, selectedType, selectedLocation]);
+  }, [opportunitiesList, searchTerm, selectedType, selectedLocation]);
 
   const resetFilters = () => {
     setSearchTerm('');
@@ -153,192 +251,282 @@ const Opportunities = ({
     setSelectedLocation('All');
   };
 
+  // Join a call as student
+  const handleJoinCall = (call) => {
+    setActiveCallRoom(call.roomID);
+  };
+
+  // If student is in a video call, show full-screen call
+  if (activeCallRoom) {
+    return (
+      <VideoCall
+        roomID={activeCallRoom}
+        userID={`student_${Date.now()}`}
+        userName="Student"
+        onLeave={() => setActiveCallRoom(null)}
+      />
+    );
+  }
+
   /* Render Details View if a card was clicked */
   if (selectedOpportunity) {
     const isApplied = appliedIds.includes(selectedOpportunity.id);
+    const opCalls = getCallsForOpportunity(selectedOpportunity);
 
     return (
       <div className="min-h-screen pb-16">
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          {/* Back Button */}
-          <button
-            onClick={() => setSelectedOpportunity(null)}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold mb-6 transition-colors cursor-pointer"
-          >
-            <ArrowLeft size={18} />
-            <span>Back to Opportunities</span>
-          </button>
+        <div className="mt-16">
+          <main className="max-w-6xl mx-auto px-4 py-8">
+            {/* Back Button */}
+            <button
+              onClick={() => setSelectedOpportunity(null)}
+              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold mb-6 transition-colors cursor-pointer"
+            >
+              <ArrowLeft size={18} />
+              <span>Back to Opportunities</span>
+            </button>
 
-          {/* View Details Container */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            
-            {/* Left Column - Main Details */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
+            {/* View Details Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               
-              {/* Header Card */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <div className="flex items-start justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white font-bold text-xl flex items-center justify-center shrink-0 shadow-md">
-                      {selectedOpportunity.logo || selectedOpportunity.company?.substring(0, 2).toUpperCase()}
+              {/* Left Column - Main Details */}
+              <div className="lg:col-span-2 flex flex-col gap-6">
+                
+                {/* Header Card */}
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                  <div className="flex items-start justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white font-bold text-xl flex items-center justify-center shrink-0 shadow-md">
+                        {selectedOpportunity.logo || selectedOpportunity.company?.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold text-slate-900">{selectedOpportunity.title}</h1>
+                        <p className="text-slate-500 font-medium text-sm mt-0.5">
+                          {selectedOpportunity.company} · {selectedOpportunity.category || 'Tech'} · {selectedOpportunity.type}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h1 className="text-2xl font-bold text-slate-900">{selectedOpportunity.title}</h1>
-                      <p className="text-slate-500 font-medium text-sm mt-0.5">
-                        {selectedOpportunity.company} · {selectedOpportunity.category || 'Tech'} · {selectedOpportunity.type}
-                      </p>
+
+                    <div className="px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-600 font-bold text-xs border border-emerald-200 shrink-0">
+                      {selectedOpportunity.matchScore || 90}% Match
                     </div>
                   </div>
 
-                  <div className="px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-600 font-bold text-xs border border-emerald-200 shrink-0">
-                    {selectedOpportunity.matchScore || 90}% Match
+                  {/* Metadata Stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
+                        <MapPin size={14} /> Location
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.location}</p>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
+                        <Timer size={14} /> Duration
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.duration}</p>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
+                        <IndianRupee size={14} /> Stipend / Salary
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.stipend}</p>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
+                        <CalendarClock size={14} /> Apply before
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.deadline}</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Metadata Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <MapPin size={14} /> Location
+                {/* ── Scheduled Video Calls Banner (Detail View) ── */}
+                {opCalls.length > 0 && (
+                  <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-3xl p-6 sm:p-8 border border-violet-200 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-violet-600 text-white flex items-center justify-center">
+                        <Video size={16} />
+                      </div>
+                      <h2 className="text-lg font-bold text-slate-900">Scheduled Video Calls</h2>
                     </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.location}</p>
+                    <div className="flex flex-col gap-3">
+                      {opCalls.map((call) => (
+                        <div
+                          key={call.id}
+                          className="flex items-center justify-between bg-white rounded-2xl px-5 py-4 border border-violet-100 shadow-sm"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center">
+                              <Phone size={16} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">
+                                Interview with {call.candidateName}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {new Date(call.scheduledTime).toLocaleString('en-IN', {
+                                  dateStyle: 'medium',
+                                  timeStyle: 'short',
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleJoinCall(call)}
+                            className="px-4 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-md active:scale-95"
+                          >
+                            <Video size={15} />
+                            Join Call
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
 
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <Timer size={14} /> Tenure
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.duration}</p>
+                {/* About Section */}
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                  <h2 className="text-lg font-bold text-slate-900 mb-3">About the role</h2>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    {selectedOpportunity.about || `Join the ${selectedOpportunity.company} team as a ${selectedOpportunity.title} and work on impactful production systems.`}
+                  </p>
+                </div>
+
+                {/* Responsibilities */}
+                {selectedOpportunity.responsibilities && (
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                    <h2 className="text-lg font-bold text-slate-900 mb-4">Responsibilities</h2>
+                    <ul className="flex flex-col gap-3">
+                      {selectedOpportunity.responsibilities.map((resp, i) => (
+                        <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                          <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                          <span>{resp}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
+                )}
 
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <IndianRupee size={14} /> Compensation
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.stipend}</p>
+                {/* Preferred Qualifications */}
+                {selectedOpportunity.qualifications && (
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                    <h2 className="text-lg font-bold text-slate-900 mb-4">Preferred qualifications</h2>
+                    <ul className="flex flex-col gap-3">
+                      {selectedOpportunity.qualifications.map((qual, i) => (
+                        <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                          <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                          <span>{qual}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
+                )}
 
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100/80">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
-                      <CalendarClock size={14} /> Apply before
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{selectedOpportunity.deadline}</p>
+                {/* Required Skills */}
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                  <h2 className="text-lg font-bold text-slate-900 mb-4">Required skills</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedOpportunity.skills?.map((skill, index) => (
+                      <span key={index} className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 rounded-full">
+                        {skill}
+                      </span>
+                    ))}
                   </div>
                 </div>
+
               </div>
 
-              {/* About Section */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <h2 className="text-lg font-bold text-slate-900 mb-3">About the role</h2>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  {selectedOpportunity.about}
-                </p>
-              </div>
-
-              {/* Responsibilities */}
-              {selectedOpportunity.responsibilities && (
+              {/* Right Column - Sidebar Widgets */}
+              <div className="flex flex-col gap-6 lg:sticky lg:top-24">
+                
+                {/* Compatibility Sidebar */}
                 <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                  <h2 className="text-lg font-bold text-slate-900 mb-4">Core Responsibilities</h2>
-                  <ul className="flex flex-col gap-3">
-                    {selectedOpportunity.responsibilities.map((resp, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-                        <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{resp}</span>
-                      </li>
+                  <h3 className="text-base font-bold text-slate-900 mb-1">Your Compatibility</h3>
+                  <p className="text-3xl font-extrabold text-blue-600 mb-4">{selectedOpportunity.matchScore || 90}% Match</p>
+
+                  <div className="w-full bg-slate-100 rounded-full h-2.5 mb-6 overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                      style={{ width: `${selectedOpportunity.matchScore || 90}%` }}
+                    />
+                  </div>
+
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Matched skills</p>
+                  <div className="flex flex-col gap-2.5 mb-6">
+                    {selectedOpportunity.skills?.map((skill, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-slate-700 font-medium">
+                        <Check size={16} className="text-emerald-500" />
+                        <span>{skill}</span>
+                      </div>
                     ))}
+                  </div>
+
+                  <button
+                    onClick={() => handleApply(selectedOpportunity.id)}
+                    disabled={isApplied}
+                    className={`w-full py-3 font-semibold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 ${
+                      isApplied
+                        ? 'bg-emerald-600 text-white cursor-not-allowed opacity-90'
+                        : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white cursor-pointer'
+                    }`}
+                  >
+                    {isApplied ? (
+                      <>
+                        <Check size={18} />
+                        <span>Applied</span>
+                      </>
+                    ) : (
+                      'Apply Now'
+                    )}
+                  </button>
+                </div>
+
+                {/* Join Call Sidebar Widget (if calls exist) */}
+                {opCalls.length > 0 && (
+                  <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-3xl p-6 text-white shadow-lg">
+                    <div className="flex items-center gap-2 font-bold text-base mb-3">
+                      <Video size={18} />
+                      <span>Video Interview</span>
+                    </div>
+                    <p className="text-violet-200 text-xs leading-relaxed mb-4">
+                      You have {opCalls.length} scheduled video call{opCalls.length > 1 ? 's' : ''} for this opportunity. Join when it's time!
+                    </p>
+                    <button
+                      onClick={() => handleJoinCall(opCalls[0])}
+                      className="w-full py-2.5 bg-white text-violet-700 font-bold rounded-xl text-sm hover:bg-violet-50 transition-all cursor-pointer active:scale-95 shadow-md"
+                    >
+                      Join Now
+                    </button>
+                  </div>
+                )}
+
+                {/* Why this opportunity */}
+                <div className="bg-blue-50/60 rounded-3xl p-6 sm:p-8 border border-blue-100">
+                  <div className="flex items-center gap-2 text-blue-700 font-bold text-base mb-4">
+                    <Sparkles size={18} />
+                    <span>Why this opportunity?</span>
+                  </div>
+                  <ul className="flex flex-col gap-3 text-sm text-slate-600 leading-relaxed">
+                    <li className="flex items-start gap-2">
+                      <span className="text-slate-400 font-bold">•</span>
+                      <span>You already have {selectedOpportunity.skills?.slice(0, 3).join(', ')}.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-slate-400 font-bold">•</span>
+                      <span>{selectedOpportunity.location} matches your location preferences.</span>
+                    </li>
                   </ul>
                 </div>
-              )}
 
-              {/* Qualifications */}
-              {selectedOpportunity.qualifications && (
-                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                  <h2 className="text-lg font-bold text-slate-900 mb-4">Preferred Qualifications</h2>
-                  <ul className="flex flex-col gap-3">
-                    {selectedOpportunity.qualifications.map((qual, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-                        <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{qual}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Required Skills */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <h2 className="text-lg font-bold text-slate-900 mb-4">Required Skills Matrix</h2>
-                <div className="flex flex-wrap gap-2">
-                  {selectedOpportunity.skills?.map((skill, index) => (
-                    <span key={index} className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 rounded-full">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
               </div>
 
             </div>
-
-            {/* Right Column - Sidebar Widgets */}
-            <div className="flex flex-col gap-6 lg:sticky lg:top-24">
-              
-              {/* Compatibility Sidebar */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <h3 className="text-base font-bold text-slate-900 mb-1">Your Match Score</h3>
-                <p className="text-3xl font-extrabold text-blue-600 mb-4">{selectedOpportunity.matchScore || 90}% Fit</p>
-
-                <div className="w-full bg-slate-100 rounded-full h-2.5 mb-6 overflow-hidden">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${selectedOpportunity.matchScore || 90}%` }}
-                  />
-                </div>
-
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Key technical badges</p>
-                <div className="flex flex-col gap-2.5 mb-6">
-                  {selectedOpportunity.skills?.slice(0, 4).map((skill, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-slate-700 font-medium">
-                      <Check size={16} className="text-emerald-500" />
-                      <span>{skill}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handleApply(selectedOpportunity.id)}
-                  disabled={isApplied}
-                  className={`w-full py-3 font-semibold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    isApplied
-                      ? 'bg-emerald-600 text-white cursor-not-allowed opacity-90'
-                      : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white'
-                  }`}
-                >
-                  {isApplied ? (
-                    <>
-                      <Check size={18} />
-                      <span>Application Submitted</span>
-                    </>
-                  ) : (
-                    'Apply with 1-Click Profile'
-                  )}
-                </button>
-              </div>
-
-              {/* Employer Info */}
-              <div className="bg-blue-50/60 rounded-3xl p-6 sm:p-8 border border-blue-100">
-                <div className="flex items-center gap-2 text-blue-700 font-bold text-base mb-3">
-                  <Sparkles size={18} />
-                  <span>Verified Corporate Partner</span>
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {selectedOpportunity.company} is an active industry partner on Skill Setu. Offers issued here automatically sync with your verified digital portfolio.
-                </p>
-              </div>
-
-            </div>
-
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     );
   }
@@ -346,28 +534,16 @@ const Opportunities = ({
   /* Render List View */
   return (
     <div className="min-h-screen">
+      <Navbar onRouteChange={onRouteChange} />
+      <div className="mt-15">
+
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Explore Opportunities</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Browse verified job postings, corporate internships, and live project openings.
-            </p>
-          </div>
-
-          {searchTerm && (
-            <div className="flex items-center gap-2 self-start sm:self-auto bg-blue-50 border border-blue-200 text-blue-800 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-sm animate-in fade-in">
-              <span>Results for: <strong className="text-blue-900">"{searchTerm}"</strong></span>
-              <button
-                onClick={() => setSearchTerm('')}
-                className="hover:bg-blue-200/60 p-0.5 rounded-full transition-colors cursor-pointer"
-                title="Clear filter"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-800">Explore Opportunities</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Find internships, jobs, and projects matching your criteria.
+          </p>
         </div>
 
         {/* Layout Container */}
@@ -401,14 +577,6 @@ const Opportunities = ({
                     placeholder="Title, skill, or company..."
                     className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      <RotateCcw size={12} />
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -416,14 +584,14 @@ const Opportunities = ({
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Job Type</label>
                 <div className="flex flex-col gap-2">
-                  {['All', 'Full-Time', 'Internship'].map((type) => (
+                  {['All', 'Full-Time', 'Part-Time', 'Job', 'Internship'].map((type) => (
                     <label key={type} className="flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer hover:text-slate-900">
                       <input
                         type="radio"
                         name="jobType"
                         checked={selectedType === type}
                         onChange={() => setSelectedType(type)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300"
                       />
                       {type}
                     </label>
@@ -446,7 +614,7 @@ const Opportunities = ({
                         name="location"
                         checked={selectedLocation === loc.value}
                         onChange={() => setSelectedLocation(loc.value)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300"
                       />
                       {loc.label}
                     </label>
@@ -458,21 +626,30 @@ const Opportunities = ({
 
           {/* RIGHT SIDE: Opportunities Cards (2 per row) */}
           <div className="flex-1 w-full">
-            {isLoading ? (
-              <div className="p-16 text-center text-slate-400 flex flex-col items-center gap-3 bg-white rounded-2xl border border-slate-100">
-                <Loader2 size={32} className="animate-spin text-blue-500" />
-                <p className="text-sm font-medium text-slate-600">Loading active openings from database...</p>
-              </div>
-            ) : filteredOpportunities.length > 0 ? (
+            {filteredOpportunities.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredOpportunities.map((op) => {
                   const isApplied = appliedIds.includes(op.id);
+                  const opCalls = getCallsForOpportunity(op);
+                  const hasCall = opCalls.length > 0;
 
                   return (
                     <div
                       key={op.id}
-                      className="relative w-full bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-5"
+                      className={`relative w-full bg-white rounded-2xl p-6 border shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-5 ${
+                        hasCall ? 'border-violet-200 ring-1 ring-violet-100' : 'border-slate-100'
+                      }`}
                     >
+                      {/* Video Call Scheduled Badge */}
+                      {hasCall && (
+                        <div className="absolute -top-2.5 right-4 z-10">
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-violet-600 text-white text-[11px] font-bold rounded-full shadow-md">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Video Call Scheduled
+                          </div>
+                        </div>
+                      )}
+
                       {/* Header */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -509,7 +686,7 @@ const Opportunities = ({
                       </div>
 
                       {/* Skills */}
-                      {op.skills && op.skills.length > 0 && (
+                      {op.skills && (
                         <div className="flex flex-wrap gap-1.5">
                           {op.skills.map((skill, index) => (
                             <span
@@ -518,6 +695,37 @@ const Opportunities = ({
                             >
                               {skill}
                             </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Video Call Join Section (inside card) */}
+                      {hasCall && (
+                        <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
+                          {opCalls.map((call) => (
+                            <div key={call.id} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Phone size={14} className="text-violet-500" />
+                                <div>
+                                  <p className="text-xs font-bold text-slate-700">
+                                    Interview · {call.candidateName}
+                                  </p>
+                                  <p className="text-[11px] text-slate-400">
+                                    {new Date(call.scheduledTime).toLocaleString('en-IN', {
+                                      dateStyle: 'medium',
+                                      timeStyle: 'short',
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleJoinCall(call)}
+                                className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                              >
+                                <Video size={12} />
+                                Join
+                              </button>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -533,10 +741,10 @@ const Opportunities = ({
                         <button
                           onClick={() => handleApply(op.id)}
                           disabled={isApplied}
-                          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 ${
                             isApplied
                               ? 'bg-emerald-600 text-white cursor-not-allowed opacity-90'
-                              : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white cursor-pointer'
                           }`}
                         >
                           {isApplied ? (
@@ -558,7 +766,7 @@ const Opportunities = ({
                 <p className="text-slate-500 font-medium">No opportunities found matching your active filters.</p>
                 <button
                   onClick={resetFilters}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-colors cursor-pointer"
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-colors"
                 >
                   Clear Filters
                 </button>
@@ -567,6 +775,7 @@ const Opportunities = ({
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 };
