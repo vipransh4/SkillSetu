@@ -12,6 +12,7 @@ import Acadmecian from './components/Uploading/Acadmecian';
 import StudentPortfolio from './components/Uploading/StudentPortfolio';
 import Profile from './components/Profile/Profile';
 import authService from './api/auth';
+import Learning from './components/Learning/learning';
 import './App.css';
 
 function App() { 
@@ -209,13 +210,15 @@ function App() {
         {route === 'upload-skills' && <StudentPortfolio onRouteChange={handleRouteChange} />}
         {route === 'upload-lectures' && <Acadmecian onRouteChange={handleRouteChange} />}
         {route === 'post-jobs' && <Industry onRouteChange={handleRouteChange} />}
+        {route === 'learning' && <Learning onRouteChange={handleRouteChange} />}
 
         {/* Fallback handlers for learning / assessment routes */}
         {route === 'opportunity' && (
           user?.role === 'academician' 
             ? <Acadmecian onRouteChange={handleRouteChange} />
-            : <Opportunities onRouteChange={handleRouteChange} initialSearch="Learning" />
+            : <Opportunities onRouteChange={handleRouteChange} initialSearch="Opportuniti" />
         )}
+        
         {route === 'assessment' && (
           user?.role === 'student'
             ? <StudentPortfolio onRouteChange={handleRouteChange} />
