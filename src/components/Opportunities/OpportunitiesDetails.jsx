@@ -1,14 +1,11 @@
 import React from 'react';
 import { ArrowLeft, MapPin, Timer, IndianRupee, CalendarClock, Check, Sparkles } from 'lucide-react';
-import Navbar from '../Navbar/Navbar';
 
 const OpportunityDetails = ({ opportunity, onBack, onRouteChange }) => {
   if (!opportunity) return null;
 
   return (
     <div className="min-h-screen pb-16">
-      <Navbar onRouteChange={onRouteChange} />
-
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Back Navigation */}
         <button

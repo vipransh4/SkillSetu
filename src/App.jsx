@@ -5,6 +5,7 @@ import SignIn from './components/SignIn/SignIn';
 import Register from './components/SignIn/Register';
 import VerifyEmail from './components/SignIn/VerifyEmail';
 import Opportunities from './components/Opportunities/Opportunities';
+import Students from './components/Students/Students';
 import Industry from './components/Uploading/Industry';
 import Acadmecian from './components/Uploading/Acadmecian';
 import StudentPortfolio from './components/Uploading/StudentPortfolio';
@@ -14,6 +15,7 @@ import './App.css';
 function App() { 
   const [route, setRoute] = useState('home');
   const [user, setUser] = useState(() => authService.getUser());
+  const [searchParams, setSearchParams] = useState({ query: '', selectedId: null });
 
   useEffect(() => {
     const token = authService.getToken();
@@ -45,6 +47,7 @@ function App() {
   }, []);
 
   const handleRouteChange = (newRoute) => {
+    setSearchParams({ query: '', selectedId: null });
     setRoute(newRoute);
   };
 
@@ -63,6 +66,28 @@ function App() {
     setRoute('home');
   };
 
+  // Handle role-aware search query submission (Enter key)
+  const handleSearchSubmit = ({ query, role }) => {
+    setSearchParams({ query, selectedId: null });
+    if (role === 'industry') {
+      setRoute('students');
+    } else {
+      setRoute('opportunities');
+    }
+  };
+
+  // Handle clicking a specific search result card in Navbar dropdown
+  const handleSearchSelect = ({ type, item }) => {
+    if (type === 'candidate') {
+      setSearchParams({ query: '', selectedId: item.id });
+      setRoute('students');
+    } else {
+      // job or faculty
+      setSearchParams({ query: '', selectedId: item.id });
+      setRoute('opportunities');
+    }
+  };
+
   const showNavbar = route !== 'signin' && route !== 'register';
   const isBannerVisible = showNavbar && user && !user.is_email_verified && route !== 'verify-email';
 
@@ -73,6 +98,8 @@ function App() {
           onRouteChange={handleRouteChange}
           user={user}
           onLogout={handleLogout}
+          onSearchSubmit={handleSearchSubmit}
+          onSearchSelect={handleSearchSelect}
         />
       )}
 
@@ -97,7 +124,22 @@ function App() {
 
       <main className={showNavbar ? (isBannerVisible ? "pt-32" : "pt-20") : ""}>
         {route === 'home' && <Home onRouteChange={handleRouteChange} />}
-        {route === 'opportunities' && <Opportunities onRouteChange={handleRouteChange} />}
+        
+        {route === 'opportunities' && (
+          <Opportunities 
+            onRouteChange={handleRouteChange} 
+            initialSearch={searchParams.query}
+            initialSelectedId={searchParams.selectedId}
+          />
+        )}
+
+        {(route === 'students' || route === 'candidates') && (
+          <Students 
+            onRouteChange={handleRouteChange} 
+            initialSearch={searchParams.query}
+            initialSelectedId={searchParams.selectedId}
+          />
+        )}
         
         {route === 'signin' && (
           <SignIn 
@@ -122,6 +164,20 @@ function App() {
         {route === 'upload-skills' && <StudentPortfolio onRouteChange={handleRouteChange} />}
         {route === 'upload-lectures' && <Acadmecian onRouteChange={handleRouteChange} />}
         {route === 'post-jobs' && <Industry onRouteChange={handleRouteChange} />}
+
+        {/* Fallback handlers for learning / assessment routes */}
+        {route === 'learning' && (
+          user?.role === 'academician' 
+            ? <Acadmecian onRouteChange={handleRouteChange} />
+            : <Opportunities onRouteChange={handleRouteChange} initialSearch="Learning" />
+        )}
+        {route === 'assessment' && (
+          user?.role === 'student'
+            ? <StudentPortfolio onRouteChange={handleRouteChange} />
+            : (user?.role === 'industry' 
+                ? <Students onRouteChange={handleRouteChange} /> 
+                : <Opportunities onRouteChange={handleRouteChange} initialSearch="Assessment" />)
+        )}
       </main>
     </div>
   );

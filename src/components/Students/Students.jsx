@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Check, Filter, UserCheck, X } from 'lucide-react';
-import Navbar from '../Navbar/Navbar';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Check, Filter, UserCheck, X, Search, ShieldCheck } from 'lucide-react';
 
 const initialStudents = [
   {
@@ -10,7 +9,7 @@ const initialStudents = [
     avatarBg: 'bg-teal-600',
     verified: true,
     college: 'NIT Trichy',
-    skills: ['React', 'Node.js', 'SQL'],
+    skills: ['React', 'Node.js', 'SQL', 'JavaScript'],
     assessmentScore: 88,
     matchScore: 94,
     shortlisted: false,
@@ -22,7 +21,7 @@ const initialStudents = [
     avatarBg: 'bg-purple-600',
     verified: true,
     college: 'IIT Madras',
-    skills: ['Python', 'AWS', 'SQL'],
+    skills: ['Python', 'AWS', 'SQL', 'Machine Learning'],
     assessmentScore: 91,
     matchScore: 91,
     shortlisted: false,
@@ -34,7 +33,7 @@ const initialStudents = [
     avatarBg: 'bg-amber-600',
     verified: false,
     college: 'Anna University',
-    skills: ['Java', 'Spring', 'Docker'],
+    skills: ['Java', 'Spring', 'Docker', 'Kubernetes'],
     assessmentScore: 82,
     matchScore: 87,
     shortlisted: false,
@@ -46,7 +45,7 @@ const initialStudents = [
     avatarBg: 'bg-emerald-600',
     verified: true,
     college: 'BITS Pilani',
-    skills: ['React', 'TypeScript', 'Figma'],
+    skills: ['React', 'TypeScript', 'Figma', 'Design Systems'],
     assessmentScore: 86,
     matchScore: 85,
     shortlisted: false,
@@ -58,17 +57,34 @@ const initialStudents = [
     avatarBg: 'bg-red-600',
     verified: false,
     college: 'VIT Vellore',
-    skills: ['Node.js', 'MongoDB', 'Redis'],
+    skills: ['Node.js', 'MongoDB', 'Redis', 'Express'],
     assessmentScore: 79,
     matchScore: 81,
     shortlisted: false,
   },
 ];
 
-const Students = ({onRouteChange}) => {
+const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null }) => {
   const [students, setStudents] = useState(initialStudents);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [activeTab, setActiveTab] = useState('bestMatch');
+
+  // Sync external search parameters
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearchTerm(initialSearch);
+    }
+  }, [initialSearch]);
+
+  useEffect(() => {
+    if (initialSelectedId) {
+      const found = initialStudents.find((s) => String(s.id) === String(initialSelectedId));
+      if (found) {
+        setSelectedStudent(found);
+      }
+    }
+  }, [initialSelectedId]);
 
   const toggleShortlist = (id) => {
     setStudents((prev) =>
@@ -80,41 +96,78 @@ const Students = ({onRouteChange}) => {
     );
   };
 
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
+      const q = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        student.name.toLowerCase().includes(q) ||
+        student.college.toLowerCase().includes(q) ||
+        student.skills.some((s) => s.toLowerCase().includes(q));
+
+      const matchesTab =
+        activeTab === 'shortlisted' ? student.shortlisted : true;
+
+      return matchesSearch && matchesTab;
+    });
+  }, [students, searchTerm, activeTab]);
+
   return (
-    <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 mt-20 min-h-screen">
-      <Navbar onRouteChange={onRouteChange}/>
+    <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 min-h-screen">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)] overflow-hidden">
         
         {/* Header Bar */}
-        <div className="p-6 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100">
+        <div className="p-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Find Skilled Students</h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              Ranked by skill-profile match to your open roles
+              Ranked by cognitive verification and skill-profile match
             </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0 self-start sm:self-auto">
-            <button
-              onClick={() => setActiveTab('bestMatch')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                activeTab === 'bestMatch'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Best match
-            </button>
-            <button
-              onClick={() => setActiveTab('filters')}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'filters'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Filter size={14} /> Filters
-            </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Search Input Filter */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Filter by name, skill, or college..."
+                className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-56 sm:w-64"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
+              <button
+                onClick={() => setActiveTab('bestMatch')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'bestMatch'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                All Talent
+              </button>
+              <button
+                onClick={() => setActiveTab('shortlisted')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'shortlisted'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <UserCheck size={13} /> Shortlisted
+              </button>
+            </div>
           </div>
         </div>
 
@@ -132,7 +185,7 @@ const Students = ({onRouteChange}) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {students.map((student) => (
+              {filteredStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-slate-50/60 transition-colors">
                   
                   {/* Candidate */}

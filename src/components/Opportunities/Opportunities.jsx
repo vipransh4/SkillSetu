@@ -11,7 +11,6 @@ import {
   Check, 
   Sparkles 
 } from 'lucide-react';
-import Navbar from '../Navbar/Navbar';
 
 const initialOpportunities = [
   {
@@ -199,14 +198,35 @@ const initialOpportunities = [
   }
 ];
 
-const Opportunities = ({ onRouteChange, opportunitiesList = initialOpportunities }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+const Opportunities = ({ 
+  onRouteChange, 
+  initialSearch = '', 
+  initialSelectedId = null, 
+  opportunitiesList = initialOpportunities 
+}) => {
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [selectedType, setSelectedType] = useState('All');
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
   
   // Track applied opportunities by ID
   const [appliedIds, setAppliedIds] = useState([]);
+
+  // Sync incoming search query or pre-selected opportunity from Navbar search
+  React.useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearchTerm(initialSearch);
+    }
+  }, [initialSearch]);
+
+  React.useEffect(() => {
+    if (initialSelectedId) {
+      const found = opportunitiesList.find((op) => String(op.id) === String(initialSelectedId));
+      if (found) {
+        setSelectedOpportunity(found);
+      }
+    }
+  }, [initialSelectedId, opportunitiesList]);
 
   const handleApply = (id) => {
     if (!appliedIds.includes(id)) {
@@ -440,9 +460,6 @@ const Opportunities = ({ onRouteChange, opportunitiesList = initialOpportunities
   /* Render List View */
   return (
     <div className="min-h-screen">
-      <Navbar onRouteChange={onRouteChange} />
-      <div className="mt-15">
-
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -636,7 +653,6 @@ const Opportunities = ({ onRouteChange, opportunitiesList = initialOpportunities
           </div>
         </div>
       </main>
-      </div>
     </div>
   );
 };

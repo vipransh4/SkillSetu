@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
-import Navbar from '../Navbar/Navbar';
 import i1 from '../../assets/1.png';
 import i2 from '../../assets/2.png';
 import i3 from '../../assets/3.png';

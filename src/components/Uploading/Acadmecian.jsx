@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Upload, Video, FileText, Play, CheckCircle2, Clock, Trash2, Eye } from 'lucide-react';
-import Navbar from '../Navbar/Navbar';
 
 const initialLectures = [
   {
@@ -97,9 +96,7 @@ const Acadmecian = ({onRouteChange}) => {
   };
 
   return (
-    <>
-    <div className="w-full max-w-7xl mt-20 mx-auto p-4 sm:p-6 min-h-screen">
-    <Navbar onRouteChange={onRouteChange}/>
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 min-h-screen">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT COLUMN: Uploaded Lectures Management */}
@@ -335,7 +332,6 @@ const Acadmecian = ({onRouteChange}) => {
 
       </div>
     </div>
-    </>
   );
 };
 
