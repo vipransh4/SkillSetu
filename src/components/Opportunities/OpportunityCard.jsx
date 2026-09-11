@@ -11,6 +11,32 @@ import {
   Video
 } from 'lucide-react';
 
+const getCompanyInitials = (name = '') => {
+  if (!name) return 'SS';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
+const getCompanyAvatarColor = (name = '') => {
+  const colors = [
+    'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white',
+    'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white',
+    'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white',
+    'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
+    'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
+    'bg-gradient-to-tr from-cyan-600 to-blue-600 text-white',
+    'bg-gradient-to-tr from-rose-600 to-pink-600 text-white',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
 const OpportunityCard = ({ 
   opportunity, 
   onSelect, 
@@ -45,10 +71,8 @@ const OpportunityCard = ({
     return 'bg-slate-100 text-slate-700 border-slate-200/70';
   };
 
-  const companyLogoInitials = (opportunity.company || 'SS')
-    .substring(0, 2)
-    .toUpperCase();
-
+  const companyInitials = opportunity.logo || getCompanyInitials(opportunity.company);
+  const avatarBg = getCompanyAvatarColor(opportunity.company);
   const matchPercent = opportunity.matchScore || 92;
   const hasCall = calls && calls.length > 0;
 
@@ -70,16 +94,8 @@ const OpportunityCard = ({
 
         <div className="flex items-start justify-between gap-3 mb-3.5">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-800 font-bold text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:border-blue-300 transition-colors overflow-hidden">
-              {opportunity.company_logo ? (
-                <img 
-                  src={opportunity.company_logo} 
-                  alt={opportunity.company} 
-                  className="w-full h-full object-cover" 
-                />
-              ) : (
-                <span>{companyLogoInitials}</span>
-              )}
+            <div className={`w-11 h-11 rounded-xl ${avatarBg} font-bold text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform select-none`}>
+              <span>{companyInitials}</span>
             </div>
 
             <div className="min-w-0">

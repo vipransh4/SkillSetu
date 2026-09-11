@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Search, 
   RotateCcw, 
@@ -166,12 +166,45 @@ const Opportunities = ({
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
   const [appliedIds, setAppliedIds] = useState([]);
   const [activeCall, setActiveCall] = useState(null);
+  const [sortBy, setSortBy] = useState('relevance');
+  const [candidateSkills, setCandidateSkills] = useState([]);
 
   const getCallsForOpportunity = (opportunity) => {
     return scheduledCalls.filter(
       (c) => c.jobId === opportunity.id || c.jobTitle === opportunity.title
     );
   };
+
+  const calculateRelevanceScore = (oppSkills = [], userSkills = [], backendScore) => {
+    if (backendScore && backendScore > 0) return backendScore;
+    if (!userSkills.length || !oppSkills.length) return 85;
+    const userSet = new Set(userSkills.map(s => s.toLowerCase().trim()));
+    const matches = oppSkills.filter(s => userSet.has(s.toLowerCase().trim()));
+    const ratio = matches.length / Math.max(oppSkills.length, 1);
+    return Math.min(99, Math.max(65, Math.round(62 + ratio * 36)));
+  };
+
+  useEffect(() => {
+    apiClient.get('/students/me')
+      .then((res) => {
+        if (res.data) {
+          const loaded = res.data.raw_extracted_skills?.length
+            ? res.data.raw_extracted_skills
+            : Object.keys(res.data.skills_matrix || {});
+          setCandidateSkills(loaded);
+        }
+      })
+      .catch(() => {});
+
+    apiClient.get('/students/applications')
+      .then((res) => {
+        const apps = Array.isArray(res.data) ? res.data : [];
+        if (apps.length > 0) {
+          setAppliedIds(apps.map(a => String(a.listing_id || a.id)));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (initialSearch) {
@@ -197,6 +230,14 @@ const Opportunities = ({
     });
   };
 
+  const prevSelectedIdRef = useRef(initialSelectedId);
+  useEffect(() => {
+    if (prevSelectedIdRef.current && !initialSelectedId) {
+      setSelectedOpportunity(null);
+    }
+    prevSelectedIdRef.current = initialSelectedId;
+  }, [initialSelectedId]);
+
   useEffect(() => {
     const fetchOpportunities = async () => {
       setIsLoading(true);
@@ -204,24 +245,28 @@ const Opportunities = ({
         const res = await apiClient.get('/listings/');
         const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
         if (data && data.length > 0) {
-          const mapped = data.map((item) => ({
-            id: item.id,
-            title: item.title,
-            company: item.company_name || item.company?.name || 'Partner Company',
-            company_logo: item.company_logo || item.company?.logo_url,
-            type: item.role_type === 'FULL_TIME' ? 'Full-Time' : (item.role_type === 'INTERNSHIP' ? 'Internship' : (item.role_type || 'Full-Time')),
-            role_type: item.role_type,
-            location: item.location || 'Remote',
-            duration: item.duration || 'Full-Time',
-            stipend: item.stipend_or_ctc || (item.min_salary ? `₹${item.min_salary} - ₹${item.max_salary}` : 'Competitive'),
-            deadline: item.deadline ? new Date(item.deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open',
-            description: item.description || '',
-            responsibilities: item.responsibilities || [],
-            skills: item.skills_required || item.skills || [],
-            is_remote: item.is_remote ?? (item.location?.toLowerCase().includes('remote')),
-            is_verified_partner: item.is_verified_partner ?? true,
-            matchScore: item.match_score || Math.floor(82 + Math.random() * 15)
-          }));
+          const mapped = data.map((item) => {
+            const itemSkills = item.required_skills || item.skills_required || item.skills || [];
+            const relScore = calculateRelevanceScore(itemSkills, candidateSkills, item.match_score);
+            return {
+              id: item.id,
+              title: item.title,
+              company: item.company_name || item.company?.name || 'Partner Company',
+              company_logo: item.company_logo || item.company?.logo_url,
+              type: item.role_type === 'FULL_TIME' ? 'Full-Time' : (item.role_type === 'INTERNSHIP' ? 'Internship' : (item.role_type || 'Full-Time')),
+              role_type: item.role_type,
+              location: item.location || 'Remote',
+              duration: item.duration || 'Full-Time',
+              stipend: item.stipend_or_ctc || (item.min_salary ? `₹${item.min_salary} - ₹${item.max_salary}` : 'Competitive'),
+              deadline: item.deadline ? new Date(item.deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open',
+              description: item.description || '',
+              responsibilities: item.responsibilities || [],
+              skills: itemSkills,
+              is_remote: item.is_remote ?? (item.location?.toLowerCase().includes('remote')),
+              is_verified_partner: item.is_verified_partner ?? true,
+              matchScore: relScore
+            };
+          });
           setOpportunities(mapped);
 
           if (initialSelectedId) {
@@ -236,10 +281,55 @@ const Opportunities = ({
     };
 
     fetchOpportunities();
-  }, [initialSelectedId]);
+  }, [initialSelectedId, candidateSkills]);
+
+  useEffect(() => {
+    if (!initialSelectedId) return;
+
+    const found = opportunities.find((o) => String(o.id) === String(initialSelectedId));
+    if (found) {
+      setSelectedOpportunity(found);
+      return;
+    }
+
+    apiClient.get(`/listings/${initialSelectedId}/`)
+      .then((res) => {
+        const item = res.data;
+        if (item && item.id) {
+          const itemSkills = item.required_skills || item.skills_required || item.skills || [];
+          const relScore = calculateRelevanceScore(itemSkills, candidateSkills, item.match_score);
+          const mappedItem = {
+            id: item.id,
+            title: item.title,
+            company: item.company_name || item.company?.name || 'Partner Company',
+            company_logo: item.company_logo || item.company?.logo_url,
+            type: item.role_type === 'FULL_TIME' ? 'Full-Time' : (item.role_type === 'INTERNSHIP' ? 'Internship' : (item.role_type || 'Full-Time')),
+            role_type: item.role_type,
+            location: item.location || 'Remote',
+            duration: item.duration || 'Full-Time',
+            stipend: item.stipend_or_ctc || (item.min_salary ? `₹${item.min_salary} - ₹${item.max_salary}` : 'Competitive'),
+            deadline: item.deadline ? new Date(item.deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open',
+            description: item.description || '',
+            responsibilities: item.responsibilities || [],
+            skills: itemSkills,
+            is_remote: item.is_remote ?? (item.location?.toLowerCase().includes('remote')),
+            is_verified_partner: item.is_verified_partner ?? true,
+            matchScore: relScore
+          };
+          setSelectedOpportunity(mappedItem);
+          setOpportunities((prev) => {
+            if (prev.some((o) => String(o.id) === String(mappedItem.id))) {
+              return prev;
+            }
+            return [mappedItem, ...prev];
+          });
+        }
+      })
+      .catch(() => {});
+  }, [initialSelectedId, opportunities, candidateSkills]);
 
   const filteredOpportunities = useMemo(() => {
-    return opportunities.filter((op) => {
+    const list = opportunities.filter((op) => {
       const q = searchTerm.trim().toLowerCase();
       if (q) {
         const titleMatch = (op.title || '').toLowerCase().includes(q);
@@ -279,7 +369,22 @@ const Opportunities = ({
 
       return true;
     });
-  }, [opportunities, searchTerm, selectedRoleType, selectedWorkMode, selectedLocation]);
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'relevance' || sortBy === 'match') {
+        const scoreA = Number(a.matchScore || 0);
+        const scoreB = Number(b.matchScore || 0);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return (b.is_verified_partner ? 1 : 0) - (a.is_verified_partner ? 1 : 0);
+      }
+      if (sortBy === 'latest') {
+        const idA = typeof a.id === 'number' ? a.id : 0;
+        const idB = typeof b.id === 'number' ? b.id : 0;
+        return idB - idA;
+      }
+      return 0;
+    });
+  }, [opportunities, searchTerm, selectedRoleType, selectedWorkMode, selectedLocation, sortBy]);
 
   const activeFilters = useMemo(() => {
     const list = [];
@@ -304,16 +409,27 @@ const Opportunities = ({
     setSelectedRoleType('All');
     setSelectedWorkMode('All');
     setSelectedLocation('All');
+    setSortBy('relevance');
   };
 
   const handleApply = async (opp) => {
     const idStr = String(opp.id);
     if (appliedIds.includes(idStr)) return;
     try {
-      await apiClient.post(`/listings/${opp.id}/apply/`);
+      await apiClient.post(`/students/jobs/${opp.id}/apply`, {});
     } catch {
+      try {
+        await apiClient.post(`/listings/${opp.id}/apply/`, {});
+      } catch {}
     }
     setAppliedIds(prev => [...prev, idStr]);
+  };
+
+  const handleBackToList = () => {
+    setSelectedOpportunity(null);
+    if (onRouteChange) {
+      onRouteChange('opportunities', { selectedId: null, query: searchTerm });
+    }
   };
 
   if (selectedOpportunity) {
@@ -321,7 +437,7 @@ const Opportunities = ({
       <div className="min-h-screen bg-[#F8F9FA] py-6 px-4 sm:px-6 lg:px-8">
         <OpportunityDetails
           opportunity={selectedOpportunity}
-          onBack={() => setSelectedOpportunity(null)}
+          onBack={handleBackToList}
           onApply={handleApply}
           isApplied={appliedIds.includes(String(selectedOpportunity.id))}
           candidateSkills={['Python', 'React', 'Git', 'SQL', 'PostgreSQL', 'Tailwind CSS']}

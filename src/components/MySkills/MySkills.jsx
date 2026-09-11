@@ -101,7 +101,7 @@ const CircularProgressRing = ({ value = 0, size = 42, strokeWidth = 3.5, color =
   );
 };
 
-const MySkills = ({ onRouteChange, initialTab = 'matrix' }) => {
+const MySkills = ({ onRouteChange, onSelectOpportunity, initialTab = 'matrix' }) => {
   const currentUser = authService.getUser();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoading, setIsLoading] = useState(true);
@@ -1750,12 +1750,20 @@ const MySkills = ({ onRouteChange, initialTab = 'matrix' }) => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {recommendations.map((rec) => (
-                    <div
-                      key={rec.id}
-                      onClick={() => onRouteChange('opportunities')}
-                      className="p-4 rounded-xl border border-slate-200/70 hover:border-slate-400 bg-white hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between group"
-                    >
+                  {recommendations.map((rec) => {
+                    const targetId = rec.listing_id || rec.id;
+                    return (
+                      <div
+                        key={targetId}
+                        onClick={() => {
+                          if (onSelectOpportunity) {
+                            onSelectOpportunity(targetId);
+                          } else if (onRouteChange) {
+                            onRouteChange('opportunities', { selectedId: targetId });
+                          }
+                        }}
+                        className="p-4 rounded-xl border border-slate-200/70 hover:border-slate-400 bg-white hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between group"
+                      >
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/60 tabular-nums">
@@ -1778,7 +1786,8 @@ const MySkills = ({ onRouteChange, initialTab = 'matrix' }) => {
                         </span>
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>

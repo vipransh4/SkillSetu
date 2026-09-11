@@ -56,8 +56,11 @@ function App() {
     }
   }, []);
 
-  const handleRouteChange = (newRoute) => {
-    setSearchParams({ query: '', selectedId: null });
+  const handleRouteChange = (newRoute, extraParams = {}) => {
+    setSearchParams({
+      query: extraParams?.query || '',
+      selectedId: extraParams?.selectedId || null
+    });
     setRoute(newRoute);
   };
 
@@ -208,9 +211,18 @@ function App() {
         
         {route === 'my-skills' && (
           user?.role === 'student' ? (
-            <MySkills onRouteChange={handleRouteChange} initialTab="matrix" />
+            <MySkills 
+              onRouteChange={handleRouteChange} 
+              onSelectOpportunity={(oppId) => handleRouteChange('opportunities', { selectedId: oppId })}
+              initialTab="matrix" 
+            />
           ) : (
-            <Opportunities onRouteChange={handleRouteChange} scheduledCalls={scheduledCalls} />
+            <Opportunities 
+              onRouteChange={handleRouteChange} 
+              initialSearch={searchParams.query}
+              initialSelectedId={searchParams.selectedId}
+              scheduledCalls={scheduledCalls} 
+            />
           )
         )}
 
@@ -222,15 +234,29 @@ function App() {
         {route === 'opportunity' && (
           user?.role === 'academician' 
             ? <Acadmecian onRouteChange={handleRouteChange} />
-            : <Opportunities onRouteChange={handleRouteChange} initialSearch="Opportunities" scheduledCalls={scheduledCalls} />
+            : <Opportunities 
+                onRouteChange={handleRouteChange} 
+                initialSearch={searchParams.query || "Opportunities"} 
+                initialSelectedId={searchParams.selectedId}
+                scheduledCalls={scheduledCalls} 
+              />
         )}
         
         {route === 'assessment' && (
           user?.role === 'student'
-            ? <MySkills onRouteChange={handleRouteChange} initialTab="assessment" />
+            ? <MySkills 
+                onRouteChange={handleRouteChange} 
+                onSelectOpportunity={(oppId) => handleRouteChange('opportunities', { selectedId: oppId })}
+                initialTab="assessment" 
+              />
             : (user?.role === 'industry' 
                 ? <Students onRouteChange={handleRouteChange} /> 
-                : <Opportunities onRouteChange={handleRouteChange} initialSearch="Assessment" scheduledCalls={scheduledCalls} />)
+                : <Opportunities 
+                    onRouteChange={handleRouteChange} 
+                    initialSearch={searchParams.query || "Assessment"} 
+                    initialSelectedId={searchParams.selectedId}
+                    scheduledCalls={scheduledCalls} 
+                  />)
         )}
       </main>
     </div>

@@ -12,11 +12,38 @@ import {
   User,
   Settings,
   ArrowRight,
-  BrainCircuit
+  BrainCircuit,
+  BookOpen
 } from "lucide-react";
 import Logo from "../../../public/hero.png";
 import authService from "../../api/auth";
 import searchService from "../../api/search";
+
+const getCompanyInitials = (name = '') => {
+  if (!name) return 'SS';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
+const getCompanyAvatarColor = (name = '') => {
+  const colors = [
+    'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white',
+    'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white',
+    'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white',
+    'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
+    'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
+    'bg-gradient-to-tr from-cyan-600 to-blue-600 text-white',
+    'bg-gradient-to-tr from-rose-600 to-pink-600 text-white',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 
 const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit }) => {
   const currentUser = user || authService.getUser();
@@ -133,13 +160,14 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
     } else if (currentUser?.role === "academician") {
       links.push({ label: "Lectures", route: "upload-lectures" });
       links.push({ label: "Opportunities", route: "opportunities" });
+      links.push({ label: "Learning", route: "learning" });
     } else {
       links.push({ label: "Opportunities", route: "opportunities" });
+      links.push({ label: "Learning", route: "learning" });
       if (currentUser?.role === "student") {
         links.push({ label: "My Skills", route: "my-skills" });
         links.push({ label: "My Portfolio", route: "upload-skills" });
       } else {
-        links.push({ label: "Learning", route: "learning" });
         links.push({ label: "Assessment", route: "assessment" });
       }
     }
@@ -470,8 +498,8 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
                                 }`}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200/60 text-slate-700 font-semibold text-xs flex items-center justify-center shrink-0">
-                                    {job.logo || job.company?.substring(0, 2).toUpperCase()}
+                                  <div className={`w-9 h-9 rounded-lg ${getCompanyAvatarColor(job.company)} font-bold text-xs flex items-center justify-center shrink-0 shadow-xs select-none`}>
+                                    {job.logo || getCompanyInitials(job.company)}
                                   </div>
                                   <div className="min-w-0">
                                     <p className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
@@ -697,6 +725,20 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-bold text-slate-800">Digital Portfolio</p>
                                 <p className="text-[11px] text-slate-400">Projects, credentials & test ratings</p>
+                              </div>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                onRouteChange("learning");
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
+                            >
+                              <BookOpen size={16} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-800">Learning Tracks</p>
+                                <p className="text-[11px] text-slate-400">Courses, faculty lectures & roadmaps</p>
                               </div>
                             </button>
                           </>

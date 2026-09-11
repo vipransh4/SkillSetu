@@ -265,8 +265,16 @@ const StudentPortfolio = ({ onRouteChange }) => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           
           <div className="flex items-start sm:items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white font-bold text-lg flex items-center justify-center shrink-0 shadow-sm">
-              {(currentUser?.first_name || currentUser?.username || 'ST').substring(0, 2).toUpperCase()}
+            <div className="w-14 h-14 rounded-full overflow-hidden ring-4 ring-slate-100 shadow-md bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold tracking-tight shrink-0">
+              {currentUser?.avatar_url ? (
+                <img
+                  src={currentUser.avatar_url}
+                  alt="Candidate Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{(currentUser?.first_name ? (currentUser.first_name[0] + (currentUser.last_name ? currentUser.last_name[0] : '')).toUpperCase() : (currentUser?.username || 'ST').substring(0, 2)).toUpperCase()}</span>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">

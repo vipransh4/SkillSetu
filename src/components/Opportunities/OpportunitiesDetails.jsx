@@ -19,6 +19,32 @@ import {
 } from 'lucide-react';
 import apiClient from '../../api/client';
 
+const getCompanyInitials = (name = '') => {
+  if (!name) return 'SS';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
+const getCompanyAvatarColor = (name = '') => {
+  const colors = [
+    'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white',
+    'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white',
+    'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white',
+    'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
+    'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
+    'bg-gradient-to-tr from-cyan-600 to-blue-600 text-white',
+    'bg-gradient-to-tr from-rose-600 to-pink-600 text-white',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
 const OpportunityDetails = ({ 
   opportunity, 
   onBack, 
@@ -34,9 +60,8 @@ const OpportunityDetails = ({
   if (!opportunity) return null;
 
   const matchPercent = opportunity.matchScore || 92;
-  const companyLogoInitials = (opportunity.company || 'SS')
-    .substring(0, 2)
-    .toUpperCase();
+  const companyInitials = opportunity.logo || getCompanyInitials(opportunity.company);
+  const avatarBg = getCompanyAvatarColor(opportunity.company);
 
   const handleApply = async () => {
     if (applied || isApplying) return;
@@ -114,16 +139,8 @@ const OpportunityDetails = ({
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xl flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
-                    {opportunity.company_logo ? (
-                      <img 
-                        src={opportunity.company_logo} 
-                        alt={opportunity.company} 
-                        className="w-full h-full object-cover" 
-                      />
-                    ) : (
-                      <span>{companyLogoInitials}</span>
-                    )}
+                  <div className={`w-14 h-14 rounded-2xl ${avatarBg} font-bold text-xl flex items-center justify-center shrink-0 shadow-md select-none`}>
+                    <span>{companyInitials}</span>
                   </div>
 
                   <div className="min-w-0">
