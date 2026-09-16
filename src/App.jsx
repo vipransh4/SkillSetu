@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import Home from './components/Home/Home';
 import Navbar from './components/Navbar/Navbar';
 import SignIn from './components/SignIn/SignIn';
@@ -11,16 +10,18 @@ import Industry from './components/Uploading/Industry';
 import Acadmecian from './components/Uploading/Acadmecian';
 import StudentPortfolio from './components/Uploading/StudentPortfolio';
 import Profile from './components/Profile/Profile';
+import AcademicianProfile from './components/Profile/AcademicianProfile';
 import MySkills from './components/MySkills/MySkills';
 import authService from './api/auth';
 import Learning from './components/Learning/learning';
+import Applications from './components/Applications/Applications';
+import RecruiterPublicProfile from './components/Profile/RecruiterPublicProfile';
 import './App.css';
 
 function App() { 
   const [route, setRoute] = useState('home');
   const [user, setUser] = useState(() => authService.getUser());
-  const [searchParams, setSearchParams] = useState({ query: '', selectedId: null });
-  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+  const [searchParams, setSearchParams] = useState({ query: '', selectedId: null, companyId: null });
   const [scheduledCalls, setScheduledCalls] = useState([]);
   
   const addScheduledCall = (call) => {
@@ -59,7 +60,9 @@ function App() {
   const handleRouteChange = (newRoute, extraParams = {}) => {
     setSearchParams({
       query: extraParams?.query || '',
-      selectedId: extraParams?.selectedId || null
+      selectedId: extraParams?.selectedId || null,
+      companyId: extraParams?.companyId || null,
+      tab: extraParams?.tab || null
     });
     setRoute(newRoute);
   };
@@ -99,10 +102,9 @@ function App() {
   };
 
   const showNavbar = route !== 'signin' && route !== 'register';
-  const isBannerVisible = showNavbar && user && !user.is_email_verified && route !== 'verify-email' && !isBannerDismissed;
 
   return (
-    <div className="min-h-screen bg-slate-50 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 overflow-x-clip">
       {showNavbar && (
         <Navbar
           onRouteChange={handleRouteChange}
@@ -110,39 +112,11 @@ function App() {
           onLogout={handleLogout}
           onSearchSubmit={handleSearchSubmit}
           onSearchSelect={handleSearchSelect}
+          currentRoute={route}
         />
       )}
 
-      {isBannerVisible && (
-        <div className="fixed top-20 left-0 right-0 z-40 flex justify-center px-4">
-          <div className="w-full max-w-4xl bg-amber-500/10 backdrop-blur-md border border-amber-300 text-amber-900 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs sm:text-sm shadow-sm animate-in fade-in duration-200">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
-              <p className="truncate">
-                Please verify your email address (<strong>{user.email}</strong>) to complete your profile verification.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 ml-3">
-              <button
-                onClick={() => handleRouteChange('verify-email')}
-                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs transition-colors shrink-0 cursor-pointer shadow-sm active:scale-95"
-              >
-                Verify Email
-              </button>
-              <button
-                onClick={() => setIsBannerDismissed(true)}
-                className="p-1 text-amber-800/60 hover:text-amber-950 hover:bg-amber-500/20 rounded-lg transition-colors cursor-pointer"
-                title="Dismiss notice"
-                aria-label="Dismiss notice"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <main className={`overflow-x-hidden ${showNavbar ? (isBannerVisible ? "pt-32" : "pt-20") : ""} ${route === 'home' ? 'h-screen overflow-hidden' : ''}`}>
+      <main className={`overflow-x-clip ${showNavbar ? (route === 'home' ? "pt-14" : "pt-20") : ""} ${route === 'home' ? 'h-screen overflow-hidden' : ''}`}>
         {route === 'home' && <Home onRouteChange={handleRouteChange} />}
         
         {route === 'opportunities' && (
@@ -151,7 +125,12 @@ function App() {
             initialSearch={searchParams.query}
             initialSelectedId={searchParams.selectedId}
             scheduledCalls={scheduledCalls}
+            initialTab={searchParams.tab || 'explore'}
           />
+        )}
+
+        {(route === 'applications' || route === 'my-applications') && (
+          <Applications onRouteChange={handleRouteChange} />
         )}
 
         {(route === 'students' || route === 'candidates') && (
@@ -192,13 +171,31 @@ function App() {
         )}
         
         {route === 'profile' && (
-          <Profile 
+          (user?.role === 'academician' || user?.role === 'academia') ? (
+            <AcademicianProfile />
+          ) : (
+            <Profile 
+              onRouteChange={handleRouteChange}
+              user={user}
+              onUserUpdate={handleVerificationSuccess}
+              initialTab="overview"
+            />
+          )
+        )}
+        
+        {route === 'academician-profile' && <AcademicianProfile />}
+        {(route === 'recruiter-profile' || route === 'recruiter') && (
+          <RecruiterPublicProfile
+            recruiterId={searchParams.selectedId}
+            companyId={searchParams.companyId}
             onRouteChange={handleRouteChange}
-            user={user}
-            onUserUpdate={handleVerificationSuccess}
-            initialTab="overview"
           />
         )}
+        {route === 'institution-analytics' && <Acadmecian onRouteChange={handleRouteChange} initialSubTab="analytics" />}
+        {route === 'institution-lectures' && <Acadmecian onRouteChange={handleRouteChange} initialSubTab="lectures" />}
+        {(route === 'institution-organization' || route === 'institution-governance') && <Acadmecian onRouteChange={handleRouteChange} initialSubTab="governance" />}
+        {route === 'institution-compliance' && <AcademicianProfile />}
+        {route === 'institution-hub' && <Acadmecian onRouteChange={handleRouteChange} />}
 
         {route === 'settings' && (
           <Profile 
@@ -227,7 +224,7 @@ function App() {
         )}
 
         {route === 'upload-skills' && <StudentPortfolio onRouteChange={handleRouteChange} />}
-        {route === 'upload-lectures' && <Acadmecian onRouteChange={handleRouteChange} />}
+        {route === 'upload-lectures' && <Acadmecian onRouteChange={handleRouteChange} initialSubTab="lectures" />}
         {route === 'post-jobs' && <Industry onRouteChange={handleRouteChange} scheduledCalls={scheduledCalls} onScheduleCall={addScheduledCall} />}
         {route === 'learning' && <Learning onRouteChange={handleRouteChange} />}
 

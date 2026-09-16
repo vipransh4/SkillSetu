@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../../api/client';
 import authService from '../../api/auth';
+import ProctoredAssessmentCockpit from './ProctoredAssessmentCockpit';
 
 const DOMAIN_PRESETS = [
   {
@@ -437,31 +438,34 @@ const MySkills = ({ onRouteChange, onSelectOpportunity, initialTab = 'matrix' })
 
     setIsExtractingResume(true);
     try {
-      let extractedText = '';
-      const ext = resumeFile.name.split('.').pop().toLowerCase();
+      // Send the actual file as multipart/form-data — field name must be "file"
+      const formData = new FormData();
+      formData.append('file', resumeFile);
 
-      if (ext === 'txt' || ext === 'md') {
-        extractedText = await resumeFile.text();
-      } else {
-        extractedText = `Resume Document: ${resumeFile.name}. Skills: Python, React, PostgreSQL, Docker, TypeScript, FastApi, UI/UX Wireframing, Financial Modeling, Git, Agile Systems.`;
-      }
-
-      if (!extractedText.trim()) {
-        throw new Error('Could not parse text from resume.');
-      }
-
-      const res = await apiClient.post('/students/resume-preview-extract', {
-        resume_text: extractedText
+      const res = await apiClient.post('/students/resume-preview-extract', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (res.data?.profile) {
-        setProfile(res.data.profile);
-        showToast('Skills extracted and profile updated successfully!', 'success');
-        setActiveTab('matrix');
-        loadRoadmapAndRecommendations();
+      const data = res.data;
+
+      if (data?.success) {
+        // Commit the AI-extracted data to the profile via analyze-resume
+        const commitRes = await apiClient.post('/students/analyze-resume', {
+          raw_text: data.raw_text
+        });
+
+        if (commitRes.data) {
+          setProfile(commitRes.data);
+          showToast('Resume parsed and profile updated successfully!', 'success');
+          setActiveTab('matrix');
+          loadRoadmapAndRecommendations();
+        }
+      } else {
+        throw new Error(data?.message || 'Extraction returned no data.');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Resume extraction failed. Check document format.', 'error');
+      const msg = err.response?.data?.message || err.message || 'Resume extraction failed. Check document format.';
+      showToast(msg, 'error');
     } finally {
       setIsExtractingResume(false);
     }
@@ -599,11 +603,11 @@ const MySkills = ({ onRouteChange, onSelectOpportunity, initialTab = 'matrix' })
                   My Skills & Competencies
                 </h1>
                 {isVerified ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-transparent text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40">
                     <ShieldCheck size={13} className="text-emerald-600" /> Verified
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/80">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-transparent text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/40">
                     <ShieldAlert size={13} className="text-amber-600" /> Unverified · Assessment Available
                   </span>
                 )}
@@ -1452,149 +1456,24 @@ const MySkills = ({ onRouteChange, onSelectOpportunity, initialTab = 'matrix' })
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-                  <div>
-                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider block mb-0.5">
-                      Technical Skill Assessment
-                    </span>
-                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                      {testSession.role_title}
-                    </h2>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-800 rounded-xl border border-slate-200 text-xs font-semibold tabular-nums">
-                      <Clock size={13} />
-                      <span>{questionTimers[activeQuestionIdx] || 0}s</span>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        if (confirm('Are you sure you want to exit this test session?')) {
-                          setTestSession(null);
-                        }
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
-                    >
-                      <X size={17} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 my-5 overflow-x-auto pb-1">
-                  {(testSession.questions || []).map((q, idx) => {
-                    const isAnswered = !!answers[q.id];
-                    const isActive = idx === activeQuestionIdx;
-                    return (
-                      <button
-                        key={q.id}
-                        onClick={() => setActiveQuestionIdx(idx)}
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${
-                          isActive
-                            ? 'bg-slate-900 text-white shadow-sm'
-                            : isAnswered
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        Q{idx + 1}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {testSession.questions && testSession.questions[activeQuestionIdx] && (
-                  <div className="bg-slate-50/70 rounded-xl p-5 sm:p-6 border border-slate-200/80">
-                    <div className="flex items-center justify-between mb-3 text-xs">
-                      <span className="font-semibold text-slate-500 uppercase tracking-wider text-[11px]">
-                        Question {activeQuestionIdx + 1} of {testSession.questions.length} · {testSession.questions[activeQuestionIdx].difficulty}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-semibold text-[11px]">
-                        {testSession.questions[activeQuestionIdx].type === 'MCQ' ? 'Multiple Choice' : 'Technical Reasoning'}
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed mb-4">
-                      {testSession.questions[activeQuestionIdx].question_text}
-                    </h3>
-
-                    {testSession.questions[activeQuestionIdx].type === 'MCQ' && testSession.questions[activeQuestionIdx].options ? (
-                      <div className="space-y-2">
-                        {testSession.questions[activeQuestionIdx].options.map((opt, optIdx) => {
-                          const currentVal = answers[testSession.questions[activeQuestionIdx].id] || '';
-                          const isSelected = currentVal === opt;
-                          return (
-                            <div
-                              key={optIdx}
-                              onClick={() => handleAnswerChange(testSession.questions[activeQuestionIdx].id, opt)}
-                              className={`p-3 rounded-xl border text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center gap-3 ${
-                                isSelected
-                                  ? 'bg-blue-50/70 border-blue-500 text-blue-950 shadow-sm'
-                                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
-                              }`}
-                            >
-                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                                isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300'
-                              }`}>
-                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                              </div>
-                              <span>{opt}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-1.5">
-                          Your Technical Explanation
-                        </label>
-                        <textarea
-                          rows={5}
-                          placeholder="Explain your approach, architecture, reasoning, or trade-offs in detail..."
-                          value={answers[testSession.questions[activeQuestionIdx].id] || ''}
-                          onChange={(e) => handleAnswerChange(testSession.questions[activeQuestionIdx].id, e.target.value)}
-                          className="w-full p-3.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 font-normal transition-all"
-                        />
-                      </div>
-                    )}
-
-                    <div className="mt-6 pt-4 border-t border-slate-200/60 flex items-center justify-between">
-                      <button
-                        onClick={() => setActiveQuestionIdx((prev) => Math.max(0, prev - 1))}
-                        disabled={activeQuestionIdx === 0}
-                        className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-30 cursor-pointer"
-                      >
-                        Previous
-                      </button>
-
-                      {activeQuestionIdx < testSession.questions.length - 1 ? (
-                        <button
-                          onClick={() => setActiveQuestionIdx((prev) => prev + 1)}
-                          className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-xl hover:bg-black cursor-pointer shadow-sm"
-                        >
-                          Next Question
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleSubmitTest}
-                          disabled={isSubmittingTest}
-                          className="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl cursor-pointer shadow-sm flex items-center gap-2"
-                        >
-                          {isSubmittingTest ? (
-                            <>
-                              <RefreshCw size={14} className="animate-spin" />
-                              Evaluating Assessment...
-                            </>
-                          ) : (
-                            'Submit Assessment for Verification'
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ProctoredAssessmentCockpit
+                session={testSession}
+                candidateId={profile?.user?.id || profile?.id || 'candidate'}
+                onComplete={(gradingData, updatedProfile) => {
+                  setGradingResult(gradingData);
+                  if (updatedProfile) {
+                    setProfile(updatedProfile);
+                  }
+                  if (gradingData?.confidence_score >= 60) {
+                    showToast(`Congratulations! You scored ${gradingData.confidence_score}%. Verified skill badge awarded!`, 'success');
+                  } else {
+                    showToast(`Assessment completed with score ${gradingData.confidence_score}%. A score of 60%+ awards verified status.`, 'info');
+                  }
+                  loadRoadmapAndRecommendations();
+                }}
+                onExit={() => setTestSession(null)}
+                onError={(errMsg) => showToast(errMsg, 'error')}
+              />
             )}
           </div>
         )}

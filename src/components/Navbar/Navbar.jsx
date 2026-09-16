@@ -13,11 +13,29 @@ import {
   Settings,
   ArrowRight,
   BrainCircuit,
-  BookOpen
+  BookOpen,
+  Bell,
+  CheckCheck,
+  FileCheck,
+  Calendar,
+  Clock,
+  Award,
+  Building2,
+  Video,
+  ChevronRight,
+  MapPin,
+  TrendingUp,
+  CheckCircle2,
+  Layers,
+  Filter,
+  Compass,
+  Mail
 } from "lucide-react";
 import Logo from "../../../public/hero.png";
 import authService from "../../api/auth";
 import searchService from "../../api/search";
+import apiClient from "../../api/client";
+import AppleMegaNav from "./AppleMegaNav";
 
 const getCompanyInitials = (name = '') => {
   if (!name) return 'SS';
@@ -45,44 +63,157 @@ const getCompanyAvatarColor = (name = '') => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit }) => {
+const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit, currentRoute }) => {
   const currentUser = user || authService.getUser();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState({ jobs: [], candidates: [], faculty: [] });
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [arrowNavActive, setArrowNavActive] = useState(false);
+  const [searchCategoryFilter, setSearchCategoryFilter] = useState("all");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState("all");
+  const [activeMegaMenu, setActiveMegaMenu] = useState(null);
+  const [isMegaNavOpen, setIsMegaNavOpen] = useState(false);
+  const enterTimerRef = useRef(null);
+  const leaveTimerRef = useRef(null);
 
   const searchContainerRef = useRef(null);
+  const searchInputRef = useRef(null);
   const profileMenuRef = useRef(null);
+  const notifMenuRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
         setIsDropdownOpen(false);
         setIsExpanded(false);
+        setIsFocused(false);
       }
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
         setIsProfileOpen(false);
       }
+      if (notifMenuRef.current && !notifMenuRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
     };
     const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setIsFocused(true);
+        setIsExpanded(true);
+        if (searchQuery.trim()) setIsDropdownOpen(true);
+        return;
+      }
       if (e.key === "Escape") {
         setIsDropdownOpen(false);
         setIsExpanded(false);
+        setIsFocused(false);
         setIsProfileOpen(false);
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
+      if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
+      if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
     };
   }, []);
+
+  const getMegaMenuKey = (link) => {
+    const route = (link?.route || "").toLowerCase();
+    const label = (link?.label || "").toLowerCase();
+    if (route === "opportunities" || label.includes("opportunities")) return "opportunities";
+    if (route === "learning" || route === "my-skills" || label.includes("learning") || label.includes("skills")) return "learning";
+    if (route === "applications" || label.includes("applications")) return "applications";
+    if (route === "students" || label.includes("candidates") || label.includes("students")) return "students";
+    if (route === "upload-skills" || route === "portfolio" || label.includes("portfolio")) return "portfolio";
+    return null;
+  };
+
+  const handleNavLinkMouseEnter = (link) => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+    const menuKey = getMegaMenuKey(link);
+    if (!menuKey) {
+      if (isMegaNavOpen) {
+        leaveTimerRef.current = setTimeout(() => {
+          setIsMegaNavOpen(false);
+          setActiveMegaMenu(null);
+        }, 80);
+      }
+      return;
+    }
+    if (enterTimerRef.current) {
+      clearTimeout(enterTimerRef.current);
+    }
+    if (isMegaNavOpen) {
+      setActiveMegaMenu(menuKey);
+    } else {
+      enterTimerRef.current = setTimeout(() => {
+        setActiveMegaMenu(menuKey);
+        setIsMegaNavOpen(true);
+      }, 70);
+    }
+  };
+
+  const handleNavLinkMouseLeave = () => {
+    if (enterTimerRef.current) {
+      clearTimeout(enterTimerRef.current);
+      enterTimerRef.current = null;
+    }
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+    }
+    leaveTimerRef.current = setTimeout(() => {
+      setIsMegaNavOpen(false);
+      setActiveMegaMenu(null);
+    }, 90);
+  };
+
+  const handleMegaNavMouseEnter = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+  };
+
+  const handleMegaNavMouseLeave = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+    }
+    leaveTimerRef.current = setTimeout(() => {
+      setIsMegaNavOpen(false);
+      setActiveMegaMenu(null);
+    }, 90);
+  };
+
+  const handleMegaNavClose = () => {
+    if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
+    if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
+    setIsMegaNavOpen(false);
+    setActiveMegaMenu(null);
+  };
+
+  const handleMegaNavigate = (route, queryParam) => {
+    handleMegaNavClose();
+    if (onRouteChange) {
+      onRouteChange(route, queryParam);
+    }
+  };
 
   const getInitials = (u) => {
     if (!u) return "U";
@@ -92,6 +223,185 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
       return (f + l).toUpperCase() || u.username?.[0]?.toUpperCase() || "U";
     }
     return (u.username?.[0] || "U").toUpperCase();
+  };
+
+  useEffect(() => {
+    if (!currentUser) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchNotifications = async () => {
+      const emailNotice = (currentUser && !currentUser.is_email_verified && currentUser.email) ? {
+        id: "verify-email-notice",
+        title: "Verify your email address",
+        message: `Please verify your email (${currentUser.email}) to complete profile verification.`,
+        notification_type: "VERIFY_EMAIL",
+        is_read: false,
+        created_at: new Date().toISOString(),
+      } : null;
+
+      try {
+        const res = await apiClient.get("/students/notifications");
+        if (isMounted && res.data) {
+          let list = res.data.notifications || [];
+          let unread = res.data.unread_count || 0;
+          if (emailNotice) {
+            list = [emailNotice, ...list.filter((n) => n.id !== "verify-email-notice")];
+            unread += 1;
+          }
+          setNotifications(list);
+          setUnreadCount(unread);
+        }
+      } catch {
+        if (isMounted) {
+          const list = emailNotice ? [emailNotice] : [];
+          setNotifications(list);
+          setUnreadCount(emailNotice ? 1 : 0);
+        }
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [currentUser?.username, currentUser?.role, currentUser?.is_email_verified, currentUser?.email]);
+
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return "";
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    if (diffInSeconds < 60) return "just now";
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d ago`;
+  };
+
+  const getNotificationBadge = (type) => {
+    switch (type) {
+      case "VERIFY_EMAIL":
+        return {
+          bg: "bg-amber-50 text-amber-600 border border-amber-100/80",
+          icon: <Mail size={16} />,
+          label: "Verify Email",
+        };
+      case "STATUS_CHANGE":
+        return {
+          bg: "bg-emerald-50 text-emerald-600 border border-emerald-100/80",
+          icon: <Sparkles size={16} />,
+          label: "Application Status",
+        };
+      case "INTERVIEW_SCHEDULED":
+        return {
+          bg: "bg-amber-50 text-amber-600 border border-amber-100/80",
+          icon: <Calendar size={16} />,
+          label: "Interview",
+        };
+      case "APPLICATION_REVIEW":
+        return {
+          bg: "bg-indigo-50 text-indigo-600 border border-indigo-100/80",
+          icon: <FileCheck size={16} />,
+          label: "Review Update",
+        };
+      case "NEW_OPPORTUNITY":
+        return {
+          bg: "bg-blue-50 text-blue-600 border border-blue-100/80",
+          icon: <Briefcase size={16} />,
+          label: "New Opening",
+        };
+      case "DEADLINE_APPROACHING":
+        return {
+          bg: "bg-rose-50 text-rose-600 border border-rose-100/80",
+          icon: <Clock size={16} />,
+          label: "Approaching Deadline",
+        };
+      case "NEW_SCHEME":
+        return {
+          bg: "bg-purple-50 text-purple-600 border border-purple-100/80",
+          icon: <Award size={16} />,
+          label: "DEI Scheme",
+        };
+      default:
+        return {
+          bg: "bg-slate-50 text-slate-600 border border-slate-200/80",
+          icon: <Bell size={16} />,
+          label: "Notice",
+        };
+    }
+  };
+
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === "unread") {
+      return notifications.filter((n) => !n.is_read);
+    }
+    if (notifFilter === "applications") {
+      return notifications.filter(
+        (n) =>
+          n.related_application_id ||
+          n.notification_type === "STATUS_CHANGE" ||
+          n.notification_type === "INTERVIEW_SCHEDULED" ||
+          n.notification_type === "APPLICATION_REVIEW"
+      );
+    }
+    if (notifFilter === "opportunities") {
+      return notifications.filter(
+        (n) =>
+          n.related_listing_id ||
+          n.notification_type === "NEW_OPPORTUNITY" ||
+          n.notification_type === "DEADLINE_APPROACHING" ||
+          n.notification_type === "NEW_SCHEME"
+      );
+    }
+    return notifications;
+  }, [notifications, notifFilter]);
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.is_read) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      if (notif.id !== "verify-email-notice") {
+        try {
+          await apiClient.post(`/students/notifications/${notif.id}/read`);
+        } catch {}
+      }
+    }
+    setIsNotifOpen(false);
+
+    if (notif.id === "verify-email-notice" || notif.notification_type === "VERIFY_EMAIL") {
+      onRouteChange("verify-email");
+    } else if (notif.notification_type === "NEW_SCHEME") {
+      onRouteChange("settings");
+    } else if (
+      notif.related_application_id ||
+      notif.notification_type === "STATUS_CHANGE" ||
+      notif.notification_type === "INTERVIEW_SCHEDULED" ||
+      notif.notification_type === "APPLICATION_REVIEW"
+    ) {
+      onRouteChange("applications");
+    } else if (notif.related_listing_id) {
+      onRouteChange("opportunities", { tab: "explore", selectedId: notif.related_listing_id });
+    } else {
+      onRouteChange("opportunities");
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+    try {
+      await apiClient.post("/students/notifications/read-all");
+    } catch {}
   };
 
   useEffect(() => {
@@ -126,28 +436,36 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
 
   const allVisibleItems = useMemo(() => {
     const items = [];
-    visibleCandidates.forEach((c) => items.push({ type: "candidate", data: c }));
-    visibleJobs.forEach((j) => items.push({ type: "job", data: j }));
-    visibleFaculty.forEach((f) => items.push({ type: "faculty", data: f }));
+    if (searchCategoryFilter === "all" || searchCategoryFilter === "candidates") {
+      visibleCandidates.forEach((c) => items.push({ type: "candidate", data: c }));
+    }
+    if (searchCategoryFilter === "all" || searchCategoryFilter === "jobs") {
+      visibleJobs.forEach((j) => items.push({ type: "job", data: j }));
+    }
+    if (searchCategoryFilter === "all" || searchCategoryFilter === "faculty") {
+      visibleFaculty.forEach((f) => items.push({ type: "faculty", data: f }));
+    }
     return items;
-  }, [visibleCandidates, visibleJobs, visibleFaculty]);
+  }, [visibleCandidates, visibleJobs, visibleFaculty, searchCategoryFilter]);
 
   useEffect(() => {
-    setSelectedIndex(0);
-  }, [searchQuery, searchResults]);
+    setSelectedIndex(-1);
+    setArrowNavActive(false);
+  }, [searchQuery, searchResults, searchCategoryFilter]);
 
   const getUploadOption = () => {
     if (!currentUser) return null;
-    switch (currentUser.role) {
-      case "student":
-        return { label: "Upload Skills", route: "upload-skills" };
-      case "academician":
-        return { label: "Upload Lectures", route: "upload-lectures" };
-      case "industry":
-        return { label: "Post Jobs", route: "post-jobs" };
-      default:
-        return null;
+    const role = (currentUser.role || '').toLowerCase();
+    if (role === 'student' || role === 'candidate') {
+      return { label: "Upload Skills", route: "upload-skills" };
     }
+    if (role === 'academician' || role === 'academia' || role === 'faculty') {
+      return { label: "Upload Resources", route: "upload-lectures" };
+    }
+    if (role === 'industry' || role === 'recruiter' || role === 'company') {
+      return { label: "Post Jobs", route: "post-jobs" };
+    }
+    return null;
   };
 
   const uploadOption = getUploadOption();
@@ -156,17 +474,22 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
     const links = [{ label: "Home", route: "home" }];
     if (currentUser?.role === "industry") {
       links.push({ label: "Candidates", route: "students" });
+      links.push({ label: "Applications", route: "applications" });
       links.push({ label: "Opportunities", route: "opportunities" });
-    } else if (currentUser?.role === "academician") {
-      links.push({ label: "Lectures", route: "upload-lectures" });
+      links.push({ label: "Portfolios", route: "students" });
+    } else if (currentUser?.role === "academician" || currentUser?.role === "academia") {
+      links.push({ label: "Institutional Hub", route: "institution-analytics" });
+      links.push({ label: "Lectures", route: "institution-lectures" });
       links.push({ label: "Opportunities", route: "opportunities" });
       links.push({ label: "Learning", route: "learning" });
+      links.push({ label: "Portfolios", route: "institution-analytics" });
     } else {
       links.push({ label: "Opportunities", route: "opportunities" });
       links.push({ label: "Learning", route: "learning" });
+      links.push({ label: "Portfolio", route: "upload-skills" });
       if (currentUser?.role === "student") {
+        links.push({ label: "Applications", route: "applications" });
         links.push({ label: "My Skills", route: "my-skills" });
-        links.push({ label: "My Portfolio", route: "upload-skills" });
       } else {
         links.push({ label: "Assessment", route: "assessment" });
       }
@@ -263,32 +586,49 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
   const handleInputKeyDown = (e) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      setArrowNavActive(true);
       if (allVisibleItems.length > 0) {
         setSelectedIndex((prev) => (prev + 1) % allVisibleItems.length);
       }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      setArrowNavActive(true);
       if (allVisibleItems.length > 0) {
         setSelectedIndex((prev) => (prev - 1 + allVisibleItems.length) % allVisibleItems.length);
       }
     } else if (e.key === "Enter") {
-      if (isDropdownOpen && allVisibleItems.length > 0 && selectedIndex >= 0 && selectedIndex < allVisibleItems.length) {
-        e.preventDefault();
+      e.preventDefault();
+      // Only select a specific dropdown card if the user intentionally navigated to it with Arrow keys
+      if (isDropdownOpen && allVisibleItems.length > 0 && selectedIndex >= 0 && selectedIndex < allVisibleItems.length && arrowNavActive) {
         const selected = allVisibleItems[selectedIndex];
         if (selected.type === "job") handleSelectJob(selected.data);
         else if (selected.type === "candidate") handleSelectCandidate(selected.data);
         else if (selected.type === "faculty") handleSelectFaculty(selected.data);
       } else {
+        // Default Enter behavior: submit search to open the full results page with all matching profiles
         handleSearchSubmit(e);
       }
     } else if (e.key === "Escape") {
       setIsDropdownOpen(false);
       setIsExpanded(false);
+      setIsFocused(false);
+      setSelectedIndex(-1);
+      setArrowNavActive(false);
     }
   };
 
   return (
     <>
+      <AppleMegaNav
+        isOpen={isMegaNavOpen}
+        activeMenu={activeMegaMenu}
+        userRole={currentUser?.role}
+        onMouseEnter={handleMegaNavMouseEnter}
+        onMouseLeave={handleMegaNavMouseLeave}
+        onNavigate={handleMegaNavigate}
+        onClose={handleMegaNavClose}
+      />
+
       {isDropdownOpen && searchQuery.trim() && (
         <div 
           className="fixed inset-0 bg-slate-900/15 backdrop-blur-xs z-40 transition-opacity duration-150 animate-in fade-in cursor-pointer"
@@ -300,484 +640,718 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
         />
       )}
 
-      <nav className="fixed top-0 left-0 w-full z-50 flex justify-center pt-3 px-2 pointer-events-none">
-        <div className="w-full max-w-[96%] flex items-center justify-between gap-4 bg-white/90 backdrop-blur-md rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.06)] px-6 py-2.5 border border-slate-200/80 pointer-events-auto">
+      <header
+        className="fixed top-0 left-0 right-0 w-full z-50 supports-[backdrop-filter]:bg-white/75 bg-white dark:supports-[backdrop-filter]:bg-[#0B0F17]/80 dark:bg-[#0B0F17] backdrop-blur-md backdrop-saturate-150 border-b border-black/[0.05] dark:border-white/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.015)]"
+        style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}
+      >
+        <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 w-full h-14 md:h-16 flex items-center justify-between">
           
-          <div 
-            className="flex items-center gap-2 shrink-0 cursor-pointer group" 
-            onClick={() => onRouteChange("home")}
-          >
-            <img src={Logo} alt="Skill Setu Logo" className="h-8 w-8 object-contain transition-transform group-hover:scale-105" />
-            <span className="font-bold text-lg text-slate-800 tracking-tight">
-              Skill Setu
-            </span>
-          </div>
-
-          <div 
-            className={`relative transition-all duration-200 ease-out z-30 ${
-              isExpanded || isDropdownOpen 
-                ? 'flex-1 max-w-2xl sm:max-w-3xl scale-[1.01]' 
-                : 'flex-1 max-w-md sm:max-w-lg'
-            } mx-2 sm:mx-4`} 
-            ref={searchContainerRef}
-          >
-            <form 
-              onSubmit={handleSearchSubmit}
-              className={`flex items-center gap-2.5 rounded-full px-4 py-2 border transition-all duration-150 ${
-                isExpanded || isDropdownOpen
-                  ? 'bg-white/95 border-blue-500 ring-4 ring-blue-500/15 shadow-[0_12px_36px_rgba(37,99,235,0.14)]'
-                  : 'bg-slate-100/90 hover:bg-slate-100 border-slate-200/60 shadow-inner'
-              }`}
+          <div className="flex items-center shrink-0">
+            <div 
+              className="flex items-center gap-2.5 shrink-0 cursor-pointer group select-none whitespace-nowrap" 
+              onClick={() => onRouteChange("home")}
             >
-              <Search 
-                size={18} 
-                className={`shrink-0 transition-all duration-150 ${
-                  isExpanded || isDropdownOpen ? 'text-blue-600 scale-110' : 'text-slate-400'
-                }`} 
-              />
-
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleInputKeyDown}
-                onFocus={() => {
-                  setIsExpanded(true);
-                  if (searchQuery.trim()) setIsDropdownOpen(true);
-                }}
-                placeholder={searchMeta.placeholder}
-                className="bg-transparent outline-none w-full text-xs sm:text-sm placeholder-slate-400 text-slate-700"
-              />
-
-              {isLoading && (
-                <Loader2 size={16} className="text-blue-500 animate-spin shrink-0" />
-              )}
-
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setIsDropdownOpen(false);
-                  }}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer shrink-0"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </form>
-
-            {isDropdownOpen && searchQuery.trim() && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200/80 overflow-hidden z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150 ease-out origin-top max-h-[75vh] flex flex-col pointer-events-auto">
-                <div className="px-3.5 py-2.5 bg-slate-50/70 border-b border-slate-200/60 flex items-center justify-between gap-2 text-xs">
-                  <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-blue-600" />
-                    <span>
-                      {totalResultsCount > 0 
-                        ? `${totalResultsCount} result${totalResultsCount > 1 ? 's' : ''} found`
-                        : 'Searching catalog & vectors...'}
-                    </span>
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
-                    Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono text-[10px] text-slate-600 shadow-xs">↵</kbd> to select
-                  </span>
-                </div>
-
-                <div className="overflow-y-auto divide-y divide-slate-100 p-1.5">
-                  {isLoading && totalResultsCount === 0 ? (
-                    <div className="p-8 text-center text-slate-400 flex flex-col items-center gap-2">
-                      <Loader2 size={24} className="animate-spin text-blue-500" />
-                      <p className="text-xs font-medium">Scanning verified database & 3-signal vector index...</p>
-                    </div>
-                  ) : totalResultsCount === 0 ? (
-                    <div className="p-6 text-center">
-                      <p className="text-sm font-semibold text-slate-700">No direct matches found for "{searchQuery}"</p>
-                      <p className="text-xs text-slate-400 mt-1 mb-3">
-                        Try clicking one of these popular keywords:
-                      </p>
-                      <div className="flex flex-wrap justify-center gap-1.5">
-                        {['React', 'Python', 'Google', 'Distributed Systems', 'Remote', 'SQL', 'CAD'].map((tag) => (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => setSearchQuery(tag)}
-                            className="px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-lg transition-colors cursor-pointer"
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {currentUser?.role === "industry" && visibleCandidates.length > 0 && (
-                        <div className="py-1">
-                          <div className="px-3 py-1.5 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                            <span className="flex items-center gap-1.5 text-emerald-700">
-                              <Users size={13} />
-                              Candidate Talent Profiles
-                            </span>
-                            <span className="text-slate-400 text-[10px]">{visibleCandidates.length} matched</span>
-                          </div>
-                          {visibleCandidates.map((candidate, idx) => {
-                            const isSelected = selectedIndex === idx;
-                            return (
-                              <div
-                                key={candidate.id}
-                                onClick={() => handleSelectCandidate(candidate)}
-                                onMouseEnter={() => setSelectedIndex(idx)}
-                                className={`p-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 group ${
-                                  isSelected ? 'bg-slate-50 ring-1 ring-slate-200/80' : 'hover:bg-slate-50/60'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200/60 text-slate-700 font-semibold text-xs flex items-center justify-center shrink-0">
-                                    {candidate.avatar || getInitials(candidate)}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <p className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                                        {candidate.name}
-                                      </p>
-                                      {candidate.verified && (
-                                        <ShieldCheck size={13} className="text-blue-600 shrink-0" />
-                                      )}
-                                    </div>
-                                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                                      {candidate.role || candidate.college} · {candidate.college}
-                                    </p>
-                                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                      {candidate.skills && candidate.skills.length > 0 ? (
-                                        candidate.skills.slice(0, 3).map((s, sIdx) => (
-                                          <span key={sIdx} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                                            {s}
-                                          </span>
-                                        ))
-                                      ) : null}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="text-right shrink-0">
-                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
-                                    candidate.matchScore > 0
-                                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60'
-                                      : 'text-slate-500 bg-slate-100 border-slate-200/60'
-                                  }`}>
-                                    {candidate.matchScore}% Match
-                                  </span>
-                                  <p className="text-[11px] text-slate-400 font-medium mt-1 tabular-nums">
-                                    Score: {candidate.assessmentScore}/100
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {visibleJobs.length > 0 && (
-                        <div className="py-1">
-                          <div className="px-3 py-1.5 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                            <span className="flex items-center gap-1.5 text-blue-700">
-                              <Briefcase size={13} />
-                              Jobs & Internships
-                            </span>
-                            <span className="text-slate-400 text-[10px]">{visibleJobs.length} matched</span>
-                          </div>
-                          {visibleJobs.map((job, idx) => {
-                            const itemIndex = visibleCandidates.length + idx;
-                            const isSelected = selectedIndex === itemIndex;
-                            return (
-                              <div
-                                key={job.id}
-                                onClick={() => handleSelectJob(job)}
-                                onMouseEnter={() => setSelectedIndex(itemIndex)}
-                                className={`p-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 group ${
-                                  isSelected ? 'bg-slate-50 ring-1 ring-slate-200/80' : 'hover:bg-slate-50/60'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className={`w-9 h-9 rounded-lg ${getCompanyAvatarColor(job.company)} font-bold text-xs flex items-center justify-center shrink-0 shadow-xs select-none`}>
-                                    {job.logo || getCompanyInitials(job.company)}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                                      {job.title}
-                                    </p>
-                                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                                      {job.company} · {job.type} · {job.location}
-                                    </p>
-                                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                      {job.skills?.slice(0, 3).map((s, sIdx) => (
-                                        <span key={sIdx} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                                          {s}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="text-right shrink-0">
-                                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
-                                    {job.matchScore || 90}% Match
-                                  </span>
-                                  <p className="text-[11px] font-medium text-slate-700 mt-1 tabular-nums">
-                                    {job.stipend}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {visibleFaculty.length > 0 && (
-                        <div className="py-1">
-                          <div className="px-3 py-1.5 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                            <span className="flex items-center gap-1.5 text-purple-700">
-                              <GraduationCap size={13} />
-                              Faculty Programs & Research
-                            </span>
-                            <span className="text-slate-400 text-[10px]">{visibleFaculty.length} matched</span>
-                          </div>
-                          {visibleFaculty.map((fac, idx) => {
-                            const itemIndex = visibleCandidates.length + visibleJobs.length + idx;
-                            const isSelected = selectedIndex === itemIndex;
-                            return (
-                              <div
-                                key={fac.id}
-                                onClick={() => handleSelectFaculty(fac)}
-                                onMouseEnter={() => setSelectedIndex(itemIndex)}
-                                className={`p-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 group ${
-                                  isSelected ? 'bg-slate-50 ring-1 ring-slate-200/80' : 'hover:bg-slate-50/60'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-9 h-9 rounded-lg bg-purple-50 border border-purple-200/60 text-purple-700 font-semibold text-xs flex items-center justify-center shrink-0">
-                                    FDP
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-slate-900 group-hover:text-purple-600 transition-colors truncate">
-                                      {fac.title}
-                                    </p>
-                                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                                      {fac.company} · {fac.type} · {fac.location}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="text-right shrink-0">
-                                  <span className="text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full">
-                                    {fac.stipend}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="px-3.5 py-2 bg-slate-50/80 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
-                  <button 
-                    type="button"
-                    onClick={handleSearchSubmit}
-                    className="font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <span>
-                      {currentUser?.role === "industry" 
-                        ? `View all candidate results` 
-                        : `View all results for "${searchQuery}"`}
-                    </span>
-                    <ArrowRight size={13} />
-                  </button>
-                  <div className="hidden sm:flex items-center gap-3 text-slate-400">
-                    <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono text-[10px] text-slate-600 shadow-xs">↑↓</kbd> navigate</span>
-                    <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono text-[10px] text-slate-600 shadow-xs">↵</kbd> select</span>
-                    <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono text-[10px] text-slate-600 shadow-xs">esc</kbd> close</span>
-                  </div>
-                </div>
-              </div>
-            )}
+              <img src={Logo} alt="Skill Setu Logo" className="h-7 w-7 object-contain transition-transform group-hover:scale-105" />
+              <span className="font-semibold text-base text-slate-900 dark:text-white tracking-tight whitespace-nowrap">
+                Skill Setu
+              </span>
+            </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-5 shrink-0">
-            {navLinks.map((link) => (
-              <button
-                key={link.label}
-                className="text-sm font-medium text-slate-700 hover:text-black transition-colors cursor-pointer"
-                onClick={() => onRouteChange(link.route)}
-              >
-                {link.label}
-              </button>
-            ))}
+          <div className="hidden md:flex items-center justify-center gap-7 lg:gap-8 flex-1 min-w-0 mx-4 lg:mx-6">
+            <div className="flex items-center gap-7 lg:gap-8 whitespace-nowrap shrink-0">
+              {navLinks.map((link) => {
+                const menuKey = getMegaMenuKey(link);
+                const isCurrent = (currentRoute && link.route === currentRoute) || (!currentRoute && link.route === "home");
+                const isMegaActive = activeMegaMenu === menuKey && isMegaNavOpen;
+                return (
+                  <button
+                    key={link.label}
+                    className={`text-[13.5px] font-medium tracking-tight transition-colors duration-150 cursor-pointer select-none relative py-1 whitespace-nowrap shrink-0 ${
+                      isCurrent
+                        ? "text-slate-950 dark:text-white font-semibold relative after:absolute after:-bottom-5 after:left-0 after:right-0 after:h-[2px] after:bg-slate-950 dark:after:bg-white after:rounded-full"
+                        : isMegaActive
+                        ? "text-slate-950 dark:text-white font-semibold"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                    onClick={() => {
+                      handleMegaNavClose();
+                      onRouteChange(link.route);
+                    }}
+                    onMouseEnter={() => handleNavLinkMouseEnter(link)}
+                    onMouseLeave={handleNavLinkMouseLeave}
+                  >
+                    <span className="whitespace-nowrap">{link.label}</span>
+                  </button>
+                );
+              })}
+            </div>
 
+            <div 
+              className="relative flex items-center w-72 h-9 shrink-0" 
+              ref={searchContainerRef}
+            >
+              <div
+                className={`absolute left-0 top-0 h-9 flex items-center rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100/70 dark:bg-white/[0.04] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus-within:bg-white dark:focus-within:bg-[#0E131F] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-blue-500/15 ${
+                  isFocused || isExpanded || isDropdownOpen ? "w-72 shadow-sm z-30" : "w-44"
+                }`}
+              >
+                <form 
+                  onSubmit={handleSearchSubmit}
+                  className="w-full h-full flex items-center relative"
+                >
+                  <Search 
+                    className="w-4 h-4 text-slate-400 ml-3 shrink-0 pointer-events-none" 
+                  />
+
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleInputKeyDown}
+                    onFocus={() => {
+                      setIsFocused(true);
+                      setIsExpanded(true);
+                      if (searchQuery.trim()) setIsDropdownOpen(true);
+                      handleMegaNavClose();
+                    }}
+                    onBlur={() => {
+                      setIsFocused(false);
+                      if (!searchQuery.trim()) {
+                        setIsExpanded(false);
+                      }
+                    }}
+                    placeholder={currentUser?.role === "industry" ? "Search candidates, skills..." : currentUser?.role === "academician" ? "Search faculty, research..." : "Search jobs, skills..."}
+                    className="w-full bg-transparent pl-2 pr-8 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none whitespace-nowrap truncate"
+                  />
+
+                  {!searchQuery && (
+                    <kbd className="absolute right-2.5 text-[10px] font-medium text-slate-400 bg-white/80 dark:bg-white/10 border border-slate-200 dark:border-white/10 px-1.5 py-0.5 rounded shadow-2xs select-none pointer-events-none">
+                      ⌘K
+                    </kbd>
+                  )}
+
+                  {isLoading && (
+                    <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin absolute right-2.5 shrink-0" />
+                  )}
+
+                  {searchQuery && !isLoading && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setIsDropdownOpen(false);
+                        searchInputRef.current?.focus();
+                      }}
+                      className="absolute right-2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded transition-colors cursor-pointer shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </form>
+
+                {isDropdownOpen && searchQuery.trim() && (
+                  <div className="absolute left-0 top-full mt-2.5 w-[min(90vw,36rem)] bg-white/95 dark:bg-[#0E131F]/95 backdrop-blur-2xl rounded-2xl shadow-[0_24px_70px_-12px_rgba(15,23,42,0.22),0_0_0_1px_rgba(226,232,240,0.85)] dark:shadow-[0_24px_70px_-12px_rgba(0,0,0,0.6)] border border-slate-200/80 dark:border-white/[0.08] overflow-hidden z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150 ease-out origin-top-left max-h-[78vh] flex flex-col pointer-events-auto">
+                    {totalResultsCount > 0 && (
+                      <div className="px-3 py-2 bg-slate-50/60 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/[0.06] flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden">
+                        {[
+                          { id: 'all', label: 'All', count: totalResultsCount },
+                          ...(currentUser?.role === 'industry' && visibleCandidates.length > 0 ? [{ id: 'candidates', label: 'Candidates', count: visibleCandidates.length, icon: Users }] : []),
+                          ...(visibleJobs.length > 0 ? [{ id: 'jobs', label: 'Jobs', count: visibleJobs.length, icon: Briefcase }] : []),
+                          ...(visibleFaculty.length > 0 ? [{ id: 'faculty', label: 'Faculty', count: visibleFaculty.length, icon: GraduationCap }] : [])
+                        ].map((tab) => {
+                          const isActive = searchCategoryFilter === tab.id;
+                          const Icon = tab.icon;
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => setSearchCategoryFilter(tab.id)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none whitespace-nowrap ${
+                                isActive
+                                  ? 'bg-white dark:bg-white/10 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-white/10'
+                                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                              }`}
+                            >
+                              {Icon && <Icon size={12} className="shrink-0" />}
+                              <span className="whitespace-nowrap">{tab.label}</span>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums whitespace-nowrap ${
+                                isActive 
+                                  ? 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300' 
+                                  : 'bg-slate-100 dark:bg-white/5 text-slate-400'
+                              }`}>
+                                {tab.count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="overflow-y-auto p-2 divide-y divide-slate-100/60 dark:divide-white/[0.04] max-h-[58vh] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+                      {totalResultsCount === 0 ? (
+                        <div className="p-8 text-center select-none whitespace-nowrap">
+                          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
+                            <Search size={18} />
+                          </div>
+                          <p className="text-xs font-semibold text-slate-800 dark:text-white whitespace-nowrap">No results found for "{searchQuery}"</p>
+                          <p className="text-[11px] text-slate-400 mt-1 whitespace-nowrap">Try searching for different skills, job titles, or company names</p>
+                        </div>
+                      ) : (
+                        <>
+                          {(searchCategoryFilter === 'all' || searchCategoryFilter === 'candidates') && visibleCandidates.length > 0 && (
+                            <div className="py-1">
+                              <div className="space-y-1">
+                                {visibleCandidates.map((cand, idx) => {
+                                  const isSelected = selectedIndex === idx;
+                                  return (
+                                    <div
+                                      key={cand.id}
+                                      onClick={() => handleSelectCandidate(cand)}
+                                      onMouseEnter={() => {
+                                        setSelectedIndex(idx);
+                                        setArrowNavActive(false);
+                                      }}
+                                      className={`p-2.5 sm:p-3 rounded-xl transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 group border whitespace-nowrap ${
+                                        isSelected
+                                          ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 shadow-xs'
+                                          : 'bg-white/60 hover:bg-slate-50/80 border-slate-100 hover:border-slate-200/80'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                          {getInitials(cand)}
+                                        </div>
+                                        <div className="min-w-0 flex-1 overflow-hidden">
+                                          <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+                                            <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate whitespace-nowrap">
+                                              {cand.name}
+                                            </p>
+                                            {cand.is_verified && (
+                                              <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5 shrink-0 whitespace-nowrap">
+                                                <Sparkles size={10} /> Verified
+                                              </span>
+                                            )}
+                                          </div>
+                                          <p className="text-[11px] text-slate-500 truncate whitespace-nowrap mt-0.5">
+                                            {cand.department || 'Student'} · {cand.institution || 'Verified College'}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2.5 shrink-0 whitespace-nowrap">
+                                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-lg tabular-nums whitespace-nowrap shrink-0">
+                                          {cand.confidence_score || cand.score || 85}% Fit
+                                        </span>
+                                        <ChevronRight size={15} className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {(searchCategoryFilter === 'all' || searchCategoryFilter === 'jobs') && visibleJobs.length > 0 && (
+                            <div className="py-1">
+                              <div className="space-y-1">
+                                {visibleJobs.map((job, idx) => {
+                                  const itemIndex = (searchCategoryFilter === 'all' ? visibleCandidates.length : 0) + idx;
+                                  const isSelected = selectedIndex === itemIndex;
+                                  const isIntern = (job.type || '').toLowerCase().includes('intern');
+                                  return (
+                                    <div
+                                      key={job.id}
+                                      onClick={() => handleSelectJob(job)}
+                                      onMouseEnter={() => {
+                                        setSelectedIndex(itemIndex);
+                                        setArrowNavActive(false);
+                                      }}
+                                      className={`p-2.5 sm:p-3 rounded-xl transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 group border whitespace-nowrap ${
+                                        isSelected
+                                          ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 shadow-xs'
+                                          : 'bg-white/60 hover:bg-slate-50/80 border-slate-100 hover:border-slate-200/80'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+                                        <div className={`w-9 h-9 rounded-xl ${getCompanyAvatarColor(job.company)} font-bold text-xs flex items-center justify-center shrink-0 shadow-xs select-none`}>
+                                          {job.logo || getCompanyInitials(job.company)}
+                                        </div>
+                                        <div className="min-w-0 flex-1 overflow-hidden">
+                                          <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+                                            <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate whitespace-nowrap">
+                                              {job.title}
+                                            </p>
+                                            <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded-md shrink-0 whitespace-nowrap ${
+                                              isIntern
+                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                                                : 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                                            }`}>
+                                              {job.type}
+                                            </span>
+                                          </div>
+                                          <p className="text-[11px] text-slate-500 truncate whitespace-nowrap mt-0.5">
+                                            {job.company} · {job.location}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2.5 shrink-0 whitespace-nowrap">
+                                        {job.stipend && (
+                                          <span className="text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200/70 px-2 py-0.5 rounded-lg tabular-nums whitespace-nowrap shrink-0">
+                                            {job.stipend}
+                                          </span>
+                                        )}
+                                        <span className="text-[11px] font-bold text-emerald-700 tabular-nums whitespace-nowrap shrink-0">
+                                          {job.matchScore || 90}% Match
+                                        </span>
+                                        <ChevronRight size={15} className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {(searchCategoryFilter === 'all' || searchCategoryFilter === 'faculty') && visibleFaculty.length > 0 && (
+                            <div className="py-1">
+                              <div className="space-y-1">
+                                {visibleFaculty.map((fac, idx) => {
+                                  const itemIndex = (searchCategoryFilter === 'all' ? visibleCandidates.length + visibleJobs.length : 0) + idx;
+                                  const isSelected = selectedIndex === itemIndex;
+                                  return (
+                                    <div
+                                      key={fac.id}
+                                      onClick={() => handleSelectFaculty(fac)}
+                                      onMouseEnter={() => {
+                                        setSelectedIndex(itemIndex);
+                                        setArrowNavActive(false);
+                                      }}
+                                      className={`p-2.5 sm:p-3 rounded-xl transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 group border whitespace-nowrap ${
+                                        isSelected
+                                          ? 'bg-purple-50/70 border-purple-300 ring-2 ring-purple-500/20 shadow-xs'
+                                          : 'bg-white/60 hover:bg-slate-50/80 border-slate-100 hover:border-slate-200/80'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                          FDP
+                                        </div>
+                                        <div className="min-w-0 flex-1 overflow-hidden">
+                                          <p className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors truncate whitespace-nowrap">
+                                            {fac.title}
+                                          </p>
+                                          <p className="text-[11px] text-slate-500 truncate whitespace-nowrap mt-0.5">
+                                            {fac.company} · {fac.location}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2.5 shrink-0 whitespace-nowrap">
+                                        <span className="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200/70 px-2 py-0.5 rounded-lg tabular-nums whitespace-nowrap shrink-0">
+                                          {fac.opportunity_type || 'Faculty Program'}
+                                        </span>
+                                        <ChevronRight size={15} className="text-slate-300 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <div className="px-4 py-2 bg-slate-50/90 dark:bg-white/[0.03] backdrop-blur-md border-t border-slate-200/70 dark:border-white/[0.06] flex items-center justify-between text-xs whitespace-nowrap">
+                      <button 
+                        type="button"
+                        onClick={handleSearchSubmit}
+                        className="font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all cursor-pointer group text-xs whitespace-nowrap truncate"
+                      >
+                        <span className="truncate whitespace-nowrap">
+                          {currentUser?.role === "industry" 
+                            ? `Explore all candidates` 
+                            : `View all results for "${searchQuery}"`}
+                        </span>
+                        <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform text-blue-600 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 sm:gap-4 lg:gap-4.5 shrink-0 whitespace-nowrap ml-auto md:ml-0">
             {currentUser ? (
-              <div className="flex items-center gap-3">
+              <>
                 {uploadOption && (
                   <button
                     onClick={() => onRouteChange(uploadOption.route)}
-                    className="px-4 py-2 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all cursor-pointer shadow-sm active:scale-95"
+                    className="bg-[#0071E3] hover:bg-[#0077ED] active:scale-[0.98] text-white text-xs font-medium px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer select-none flex items-center gap-1.5 shrink-0 whitespace-nowrap"
                   >
-                    {uploadOption.label}
+                    <span className="whitespace-nowrap">{uploadOption.label}</span>
                   </button>
                 )}
 
+                <div className="relative" ref={notifMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNotifOpen((prev) => !prev);
+                      setIsProfileOpen(false);
+                      handleMegaNavClose();
+                    }}
+                    className={`w-9 h-9 flex items-center justify-center rounded-xl bg-black/[0.02] hover:bg-black/[0.05] dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.06] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white active:bg-slate-200/60 transition-all cursor-pointer relative select-none shrink-0 ${
+                      isNotifOpen ? "ring-2 ring-blue-500/20 bg-blue-50/50 text-blue-600 dark:text-blue-400" : ""
+                    }`}
+                    aria-label="Notifications"
+                    title="Notifications"
+                  >
+                    <Bell size={16} />
+                    {unreadCount > 0 && (
+                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full absolute top-2 right-2 ring-2 ring-white dark:ring-[#0B0F17]" />
+                    )}
+                  </button>
+
+                  {isNotifOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-84 sm:w-96 bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-2xl rounded-2xl overflow-hidden z-50 isolate animate-in fade-in zoom-in-95 duration-150 origin-top-right whitespace-nowrap">
+                      <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-white whitespace-nowrap">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <h3 className="text-sm font-bold text-slate-900 whitespace-nowrap">Notifications</h3>
+                          {unreadCount > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-transparent text-blue-600 border border-blue-200 tabular-nums whitespace-nowrap">
+                              {unreadCount} new
+                            </span>
+                          )}
+                        </div>
+                        {unreadCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleMarkAllRead}
+                            className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                          >
+                            <CheckCheck size={14} className="shrink-0" />
+                            <span className="whitespace-nowrap">Mark all read</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 whitespace-nowrap">
+                        <div className="flex items-center gap-1 bg-slate-100/80 p-0.5 rounded-lg text-xs font-medium text-slate-500 whitespace-nowrap">
+                          {[
+                            { id: "all", label: "All" },
+                            { id: "unread", label: "Unread" },
+                            { id: "applications", label: "Applications" },
+                            { id: "opportunities", label: "Opportunities" },
+                          ].map((tab) => {
+                            const isActive = notifFilter === tab.id;
+                            return (
+                              <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setNotifFilter(tab.id)}
+                                className={`flex-1 py-1 px-2 text-center text-xs transition-all cursor-pointer whitespace-nowrap ${
+                                  isActive
+                                    ? "bg-white text-slate-900 shadow-xs rounded-md font-semibold"
+                                    : "text-slate-500 hover:text-slate-900 font-medium"
+                                }`}
+                              >
+                                <span className="whitespace-nowrap">{tab.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="max-h-96 overflow-y-auto space-y-1 px-2 py-1 bg-white [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        {filteredNotifications.length === 0 ? (
+                          <div className="p-8 text-center">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2">
+                              <Bell size={18} />
+                            </div>
+                            <p className="text-xs font-semibold text-slate-700 whitespace-nowrap">No notifications</p>
+                          </div>
+                        ) : (
+                          filteredNotifications.map((n) => {
+                            const badgeMeta = getNotificationBadge(n.notification_type);
+                            return (
+                              <div
+                                key={n.id}
+                                onClick={() => handleNotificationClick(n)}
+                                className={`p-3 rounded-xl transition-all duration-150 flex items-center gap-3 cursor-pointer group whitespace-nowrap ${
+                                  n.is_read
+                                    ? "bg-transparent hover:bg-slate-50"
+                                    : "bg-blue-50/40 hover:bg-blue-50/70"
+                                }`}
+                              >
+                                <div className={`rounded-xl p-2 flex items-center justify-center shrink-0 ${badgeMeta.bg}`}>
+                                  {badgeMeta.icon}
+                                </div>
+                                <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
+                                  <p className="text-xs font-bold text-slate-900 truncate whitespace-nowrap group-hover:text-blue-600 transition-colors">
+                                    {n.title}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500 truncate whitespace-nowrap mt-0.5">
+                                    {n.message}
+                                  </p>
+                                </div>
+                                <span className="text-[10px] text-slate-400 font-medium tabular-nums shrink-0 whitespace-nowrap">
+                                  {formatRelativeTime(n.created_at)}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <div className="p-3 bg-slate-50/60 border-t border-slate-100 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsNotifOpen(false);
+                            onRouteChange("applications");
+                          }}
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap"
+                        >
+                          <span className="whitespace-nowrap">View all applications</span>
+                          <ArrowRight size={13} className="shrink-0" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="relative" ref={profileMenuRef}>
                   <button
-                    onClick={() => setIsProfileOpen((prev) => !prev)}
-                    className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all cursor-pointer select-none outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                      isProfileOpen ? "ring-2 ring-blue-600 shadow-md scale-105" : "hover:ring-2 hover:ring-slate-300 shadow-sm"
+                    onClick={() => {
+                      setIsProfileOpen((prev) => !prev);
+                      setIsNotifOpen(false);
+                      handleMegaNavClose();
+                    }}
+                    className={`relative w-9 h-9 rounded-full overflow-hidden transition-all cursor-pointer select-none outline-none shrink-0 ${
+                      isProfileOpen 
+                        ? "ring-2 ring-blue-600 shadow-sm" 
+                        : "ring-2 ring-slate-200 hover:ring-slate-300 dark:ring-white/20"
                     }`}
                     aria-label="User Profile Menu"
                     title="User Profile Menu"
                   >
-                    {currentUser.avatar_url ? (
+                    {currentUser?.avatar_url ? (
                       <img
                         src={currentUser.avatar_url}
-                        alt={currentUser.username}
+                        alt={currentUser.first_name || currentUser.username || "Profile"}
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
-                      <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-xs sm:text-sm flex items-center justify-center tracking-tight shadow-inner">
+                      <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-xs flex items-center justify-center tracking-tight select-none">
                         {getInitials(currentUser)}
                       </div>
                     )}
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0B0F17]" />
                   </button>
 
                   {isProfileOpen && (
-                    <div className="absolute right-0 top-full mt-2.5 w-72 bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
-                      <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-full shrink-0 overflow-hidden ring-2 ring-slate-100 flex items-center justify-center bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-base shadow-sm">
-                          {currentUser.avatar_url ? (
+                    <div className="absolute right-0 top-full mt-2.5 w-64 bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 origin-top-right whitespace-nowrap">
+                      <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 whitespace-nowrap">
+                        <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden ring-2 ring-slate-100 flex items-center justify-center bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-sm shadow-xs">
+                          {currentUser?.avatar_url ? (
                             <img
                               src={currentUser.avatar_url}
                               alt="Avatar"
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
                             getInitials(currentUser)
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-slate-900 truncate">
+                        <div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">
+                          <p className="text-xs font-bold text-slate-900 truncate whitespace-nowrap">
                             {currentUser.first_name
                               ? `${currentUser.first_name} ${currentUser.last_name || ""}`.trim()
                               : currentUser.username}
                           </p>
-                          <p className="text-xs text-slate-500 truncate">@{currentUser.username}</p>
-                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                            <span className="capitalize px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                          <p className="text-[11px] text-slate-500 truncate whitespace-nowrap">@{currentUser.username}</p>
+                          <div className="mt-1 flex items-center gap-1.5 whitespace-nowrap">
+                            <span className="capitalize px-2 py-0.2 rounded-full text-[10px] font-bold bg-transparent text-blue-700 border border-blue-200 shrink-0 whitespace-nowrap">
                               {currentUser.role === "student" ? "Candidate" : currentUser.role}
                             </span>
                             {currentUser.is_email_verified && (
-                              <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                                <ShieldCheck size={11} /> Verified
+                              <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5 shrink-0 whitespace-nowrap">
+                                <ShieldCheck size={11} className="shrink-0" /> 
+                                <span className="whitespace-nowrap">Verified</span>
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="p-1.5 space-y-0.5 text-sm">
-                        <button
-                          onClick={() => {
-                            setIsProfileOpen(false);
-                            onRouteChange("profile");
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
-                        >
-                          <User size={16} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-800">My Profile</p>
-                            <p className="text-[11px] text-slate-400">View & edit profile, skills, academics</p>
-                          </div>
-                        </button>
-
-                        {currentUser.role === "student" && (
+                      <div className="p-1.5 space-y-0.5 text-xs whitespace-nowrap">
+                        {(currentUser.role === "academician" || currentUser.role === "academia") ? (
                           <>
                             <button
                               onClick={() => {
                                 setIsProfileOpen(false);
-                                onRouteChange("my-skills");
+                                onRouteChange("academician-profile");
                               }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
                             >
-                              <BrainCircuit size={16} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-slate-800">My Skills</p>
-                                <p className="text-[11px] text-slate-400">Skill matrix, extraction & testing</p>
-                              </div>
+                              <User size={15} className="text-slate-400 shrink-0" />
+                              <span className="truncate whitespace-nowrap">My Profile & Credentials</span>
                             </button>
 
                             <button
                               onClick={() => {
                                 setIsProfileOpen(false);
-                                onRouteChange("upload-skills");
+                                onRouteChange("institution-organization");
                               }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
                             >
-                              <Sparkles size={16} className="text-slate-400 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-slate-800">Digital Portfolio</p>
-                                <p className="text-[11px] text-slate-400">Projects, credentials & test ratings</p>
-                              </div>
+                              <Building2 size={15} className="text-slate-400 shrink-0" />
+                              <span className="truncate whitespace-nowrap">Institutional Hub & AISHE</span>
                             </button>
 
                             <button
                               onClick={() => {
                                 setIsProfileOpen(false);
-                                onRouteChange("learning");
+                                onRouteChange("institution-governance");
                               }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
                             >
-                              <BookOpen size={16} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-slate-800">Learning Tracks</p>
-                                <p className="text-[11px] text-slate-400">Courses, faculty lectures & roadmaps</p>
-                              </div>
+                              <Users size={15} className="text-slate-400 shrink-0" />
+                              <span className="truncate whitespace-nowrap">Student Verification Ledger</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                onRouteChange("institution-lectures");
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                            >
+                              <Video size={15} className="text-slate-400 shrink-0" />
+                              <span className="truncate whitespace-nowrap">Course Lectures & Resources</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                onRouteChange("academician-profile");
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                            >
+                              <ShieldCheck size={15} className="text-slate-400 shrink-0" />
+                              <span className="truncate whitespace-nowrap">NEP 2020 Compliance</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                onRouteChange("academician-profile");
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                            >
+                              <Settings size={15} className="text-slate-400 shrink-0" />
+                              <span className="truncate whitespace-nowrap">Account Preferences</span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                onRouteChange("profile");
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                            >
+                              <User size={15} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
+                              <span className="truncate whitespace-nowrap">My Profile</span>
+                            </button>
+
+                            {currentUser.role === "student" && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setIsProfileOpen(false);
+                                    onRouteChange("applications");
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                                >
+                                  <Briefcase size={15} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
+                                  <span className="truncate whitespace-nowrap">My Applications</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setIsProfileOpen(false);
+                                    onRouteChange("my-skills");
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                                >
+                                  <BrainCircuit size={15} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
+                                  <span className="truncate whitespace-nowrap">My Skills</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setIsProfileOpen(false);
+                                    onRouteChange("upload-skills");
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                                >
+                                  <Sparkles size={15} className="text-slate-400 shrink-0" />
+                                  <span className="truncate whitespace-nowrap">Digital Portfolio</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setIsProfileOpen(false);
+                                    onRouteChange("learning");
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                                >
+                                  <BookOpen size={15} className="text-slate-400 group-hover:text-blue-600 shrink-0" />
+                                  <span className="truncate whitespace-nowrap">Learning Tracks</span>
+                                </button>
+                              </>
+                            )}
+
+                            <button
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                onRouteChange("settings");
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer whitespace-nowrap"
+                            >
+                              <Settings size={15} className="text-slate-400 shrink-0" />
+                              <span className="truncate whitespace-nowrap">Settings</span>
                             </button>
                           </>
                         )}
-
-                        <button
-                          onClick={() => {
-                            setIsProfileOpen(false);
-                            onRouteChange("settings");
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 font-medium transition-colors text-left cursor-pointer"
-                        >
-                          <Settings size={16} className="text-slate-400 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-800">Settings</p>
-                            <p className="text-[11px] text-slate-400">Notifications, discovery & privacy</p>
-                          </div>
-                        </button>
                       </div>
 
-                      <div className="pt-1 mt-1 border-t border-slate-100 p-1.5">
+                      <div className="pt-1 mt-1 border-t border-slate-100 p-1.5 whitespace-nowrap">
                         <button
                           onClick={() => {
                             setIsProfileOpen(false);
                             handleLogoutClick();
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-medium transition-colors text-left cursor-pointer text-xs"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-medium transition-colors text-left cursor-pointer text-xs whitespace-nowrap"
                         >
-                          <LogOut size={16} className="shrink-0" />
-                          <span className="font-bold">Sign Out</span>
+                          <LogOut size={15} className="shrink-0" />
+                          <span className="font-bold truncate whitespace-nowrap">Sign Out</span>
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             ) : (
               <button
-                className="px-5 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-black rounded-full transition-all cursor-pointer shadow-sm active:scale-95"
+                className="bg-[#0071E3] hover:bg-[#0077ED] active:scale-[0.98] text-white text-xs font-medium px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer select-none shrink-0 whitespace-nowrap"
                 onClick={() => onRouteChange("signin")}
               >
                 Sign In
@@ -785,7 +1359,7 @@ const Navbar = ({ onRouteChange, user, onLogout, onSearchSelect, onSearchSubmit 
             )}
           </div>
         </div>
-      </nav>
+      </header>
     </>
   );
 };

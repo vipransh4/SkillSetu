@@ -7,10 +7,10 @@ import i3 from '../../assets/3.png';
 import i4 from '../../assets/4.png';
 
 const defaultSlides = [
-    { id: 1, image: i1, label: 'Get Started', route: 'signin' },
-    { id: 3, image: i3, label: 'Start Learning', route: 'learning' },
-    { id: 2, image: i2, label: 'View Opportunities', route: 'opportunities' },
-    { id: 4, image: i4, label: 'Explore Assessment', route: 'assessment' },
+  { id: 1, image: i1, label: 'Get Started', route: 'signin' },
+  { id: 3, image: i3, label: 'Start Learning', route: 'learning' },
+  { id: 2, image: i2, label: 'View Opportunities', route: 'opportunities' },
+  { id: 4, image: i4, label: 'Explore Assessment', route: 'assessment' },
 ];
 
 const Home = ({ slides = defaultSlides, interval = 6000, onRouteChange }) => {
@@ -101,9 +101,8 @@ const Home = ({ slides = defaultSlides, interval = 6000, onRouteChange }) => {
             <button
               key={index}
               onClick={() => setPage([index, index > imageIndex ? 1 : -1])}
-              className={`h-3 rounded-full transition-all cursor-pointer ${
-                index === imageIndex ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/75 w-3'
-              }`}
+              className={`h-3 rounded-full transition-all cursor-pointer ${index === imageIndex ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/75 w-3'
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}

@@ -34,10 +34,15 @@ import {
   Link,
   Building,
   Users,
-  UploadCloud
+  UploadCloud,
+  Palette,
+  Moon,
+  Sun
 } from 'lucide-react';
 import apiClient from '../../api/client';
 import authService from '../../api/auth';
+import { COMMON_ORGANIZATIONS, POPULAR_CHIPS } from '../SignIn/OrganizationAutocomplete';
+import AppearanceSettings from '../Settings/AppearanceSettings';
 
 const Github = ({ size = 16, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -93,6 +98,7 @@ const Profile = ({ onRouteChange, user: propUser, onUserUpdate, initialTab = 'ov
   const [customAvatarInput, setCustomAvatarInput] = useState('');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [settingsSubTab, setSettingsSubTab] = useState('appearance');
   const fileInputRef = useRef(null);
 
   const [personalForm, setPersonalForm] = useState({
@@ -1127,7 +1133,7 @@ const Profile = ({ onRouteChange, user: propUser, onUserUpdate, initialTab = 'ov
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
                       Company Legal Name
                     </label>
@@ -1138,6 +1144,39 @@ const Profile = ({ onRouteChange, user: propUser, onUserUpdate, initialTab = 'ov
                       placeholder="e.g. Nexa Systems Ltd"
                       className="w-full px-4 py-2.5 text-sm bg-slate-50/70 border border-slate-200/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all font-medium text-slate-900"
                     />
+
+                    {/* Quick Preset Organization Chips */}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles size={10} className="text-amber-500" />
+                        Quick Select:
+                      </span>
+                      {POPULAR_CHIPS.map((chip) => {
+                        const org = COMMON_ORGANIZATIONS.find(o => o.name.toLowerCase().includes(chip.toLowerCase()));
+                        const targetName = org ? org.name : chip;
+                        const isSelected = recruiterForm.company_name?.toLowerCase() === targetName.toLowerCase();
+                        return (
+                          <button
+                            key={chip}
+                            type="button"
+                            onClick={() => {
+                              setRecruiterForm(prev => ({
+                                ...prev,
+                                company_name: targetName,
+                                company_website: prev.company_website || (org ? `https://${org.domain}` : '')
+                              }));
+                            }}
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-all cursor-pointer border ${
+                              isSelected
+                                ? 'bg-blue-50 text-blue-700 border-blue-300 font-bold'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                          >
+                            {chip}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div>
@@ -1367,83 +1406,108 @@ const Profile = ({ onRouteChange, user: propUser, onUserUpdate, initialTab = 'ov
 
           {activeTab === 'settings' && (
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs">
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-                <Sliders size={18} className="text-blue-600" />
-                Hiring & Candidate Screening Preferences
-              </h2>
-              <p className="text-xs text-slate-500 mb-6">
-                Configure algorithmic shortlisting thresholds and anti-bias screening.
-              </p>
+              <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setSettingsSubTab('appearance')}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    settingsSubTab === 'appearance'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                  }`}
+                >
+                  <Palette size={14} />
+                  <span>Appearance & Theme</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsSubTab('rules')}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    settingsSubTab === 'rules'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                  }`}
+                >
+                  <Sliders size={14} />
+                  <span>Hiring & Screening Rules</span>
+                </button>
+              </div>
 
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Anti-Bias & Blind Screening</h3>
-                  <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">Default Blind Screening</span>
-                      <span className="text-xs text-slate-500">Automatically redacts candidate PII until initial technical shortlisting</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={recruiterSettings.candidate_screening?.default_blind_screening || false}
-                      onChange={(e) => setRecruiterSettings({
-                        ...recruiterSettings,
-                        candidate_screening: { ...recruiterSettings.candidate_screening, default_blind_screening: e.target.checked }
-                      })}
-                      className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                    />
-                  </label>
-                </div>
+              {settingsSubTab === 'appearance' && (
+                <AppearanceSettings />
+              )}
 
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Automated Screening Rules</h3>
-                  <div className="space-y-3">
+              {settingsSubTab === 'rules' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Anti-Bias & Blind Screening</h3>
                     <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
                       <div>
-                        <span className="text-sm font-bold text-slate-900 block">Auto-Advance High Match Talent</span>
-                        <span className="text-xs text-slate-500">Move candidates with &gt;= 85% skill match automatically to Under Review</span>
+                        <span className="text-sm font-bold text-slate-900 block">Default Blind Screening</span>
+                        <span className="text-xs text-slate-500">Automatically redacts candidate PII until initial technical shortlisting</span>
                       </div>
                       <input
                         type="checkbox"
-                        checked={recruiterSettings.hiring_workflow?.auto_advance_high_match || false}
+                        checked={recruiterSettings.candidate_screening?.default_blind_screening || false}
                         onChange={(e) => setRecruiterSettings({
                           ...recruiterSettings,
-                          hiring_workflow: { ...recruiterSettings.hiring_workflow, auto_advance_high_match: e.target.checked }
-                        })}
-                        className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
-                      <div>
-                        <span className="text-sm font-bold text-slate-900 block">Show Diversity Employer Badge</span>
-                        <span className="text-xs text-slate-500">Feature diversity and affirmative action initiatives across listings</span>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={recruiterSettings.branding?.show_diversity_employer_badge || false}
-                        onChange={(e) => setRecruiterSettings({
-                          ...recruiterSettings,
-                          branding: { ...recruiterSettings.branding, show_diversity_employer_badge: e.target.checked }
+                          candidate_screening: { ...recruiterSettings.candidate_screening, default_blind_screening: e.target.checked }
                         })}
                         className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
                       />
                     </label>
                   </div>
-                </div>
 
-                <div className="pt-4 border-t border-slate-200/80 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSaveRecruiterSettings}
-                    disabled={isSaving}
-                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
-                  >
-                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                    <span>Save Hiring Preferences</span>
-                  </button>
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Automated Screening Rules</h3>
+                    <div className="space-y-3">
+                      <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
+                        <div>
+                          <span className="text-sm font-bold text-slate-900 block">Auto-Advance High Match Talent</span>
+                          <span className="text-xs text-slate-500">Move candidates with &gt;= 85% skill match automatically to Under Review</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={recruiterSettings.hiring_workflow?.auto_advance_high_match || false}
+                          onChange={(e) => setRecruiterSettings({
+                            ...recruiterSettings,
+                            hiring_workflow: { ...recruiterSettings.hiring_workflow, auto_advance_high_match: e.target.checked }
+                          })}
+                          className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
+                        <div>
+                          <span className="text-sm font-bold text-slate-900 block">Show Diversity Employer Badge</span>
+                          <span className="text-xs text-slate-500">Feature diversity and affirmative action initiatives across listings</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={recruiterSettings.branding?.show_diversity_employer_badge || false}
+                          onChange={(e) => setRecruiterSettings({
+                            ...recruiterSettings,
+                            branding: { ...recruiterSettings.branding, show_diversity_employer_badge: e.target.checked }
+                          })}
+                          className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200/80 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveRecruiterSettings}
+                      disabled={isSaving}
+                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
+                    >
+                      {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                      <span>Save Hiring Preferences</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -2211,104 +2275,157 @@ const Profile = ({ onRouteChange, user: propUser, onUserUpdate, initialTab = 'ov
 
           {activeTab === 'settings' && (
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs">
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-                <Settings size={18} className="text-blue-600" />
-                Career & Discovery Preferences
-              </h2>
-              <p className="text-xs text-slate-500 mb-6">
-                Manage recruiter discoverability, preferred work modes, and automated alerts.
-              </p>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Work Arrangement Preference</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[
-                      { value: 'ALL', label: 'All Arrangements', desc: 'Remote, Hybrid, and Onsite' },
-                      { value: 'REMOTE', label: 'Remote Only', desc: '100% Work from Anywhere' },
-                      { value: 'HYBRID', label: 'Hybrid / Onsite', desc: 'In-Office or Mixed Environment' }
-                    ].map((arr) => {
-                      const isSelected = preferences.career_discovery?.preferred_work_arrangement === arr.value;
-                      return (
-                        <button
-                          key={arr.value}
-                          type="button"
-                          onClick={() => setPreferences({
-                            ...preferences,
-                            career_discovery: { ...preferences.career_discovery, preferred_work_arrangement: arr.value }
-                          })}
-                          className={`p-4 rounded-2xl text-left border transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 shadow-xs'
-                              : 'bg-slate-50/70 border-slate-200/90 hover:border-slate-300'
-                          }`}
-                        >
-                          <span className={`text-sm font-bold block ${isSelected ? 'text-blue-700' : 'text-slate-900'}`}>{arr.label}</span>
-                          <span className="text-xs text-slate-500 mt-0.5 block">{arr.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Privacy & Talent Search Visibility</h3>
-                  <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">Allow Verified Recruiters to Discover Profile</span>
-                      <span className="text-xs text-slate-500">Makes your verified skills matrix and portfolio discoverable by enterprise hiring teams</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={preferences.privacy?.share_profile_with_verified_recruiters ?? true}
-                      onChange={(e) => setPreferences({
-                        ...preferences,
-                        privacy: { ...preferences.privacy, share_profile_with_verified_recruiters: e.target.checked }
-                      })}
-                      className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                    />
-                  </label>
-                </div>
-
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Notification Alerts</h3>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'email_application_updates', label: 'Application Status Alerts', desc: 'Real-time updates when an application moves stages' },
-                      { key: 'interview_invites', label: 'Interview Invitations', desc: 'Direct alerts for scheduled recruiter viva and interviews' },
-                      { key: 'new_opportunity_alerts', label: 'Matching Job Radar', desc: 'Notifications when postings match your verified competencies' }
-                    ].map((item) => (
-                      <label key={item.key} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
-                        <div>
-                          <span className="text-sm font-bold text-slate-900 block">{item.label}</span>
-                          <span className="text-xs text-slate-500">{item.desc}</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={preferences.notifications?.[item.key] ?? true}
-                          onChange={(e) => setPreferences({
-                            ...preferences,
-                            notifications: { ...preferences.notifications, [item.key]: e.target.checked }
-                          })}
-                          className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-200/80 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSavePreferences}
-                    disabled={isSaving}
-                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
-                  >
-                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                    <span>Save Preferences</span>
-                  </button>
-                </div>
+              <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setSettingsSubTab('appearance')}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    settingsSubTab === 'appearance'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                  }`}
+                >
+                  <Palette size={14} />
+                  <span>Appearance & Theme</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsSubTab('career')}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    settingsSubTab === 'career'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                  }`}
+                >
+                  <Briefcase size={14} />
+                  <span>Career & Discovery</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsSubTab('notifications')}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    settingsSubTab === 'notifications'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                  }`}
+                >
+                  <Bell size={14} />
+                  <span>Privacy & Alerts</span>
+                </button>
               </div>
+
+              {settingsSubTab === 'appearance' && (
+                <AppearanceSettings />
+              )}
+
+              {settingsSubTab === 'career' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Work Arrangement Preference</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { value: 'ALL', label: 'All Arrangements', desc: 'Remote, Hybrid, and Onsite' },
+                        { value: 'REMOTE', label: 'Remote Only', desc: '100% Work from Anywhere' },
+                        { value: 'HYBRID', label: 'Hybrid / Onsite', desc: 'In-Office or Mixed Environment' }
+                      ].map((arr) => {
+                        const isSelected = preferences.career_discovery?.preferred_work_arrangement === arr.value;
+                        return (
+                          <button
+                            key={arr.value}
+                            type="button"
+                            onClick={() => setPreferences({
+                              ...preferences,
+                              career_discovery: { ...preferences.career_discovery, preferred_work_arrangement: arr.value }
+                            })}
+                            className={`p-4 rounded-2xl text-left border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 shadow-xs'
+                                : 'bg-slate-50/70 border-slate-200/90 hover:border-slate-300'
+                            }`}
+                          >
+                            <span className={`text-sm font-bold block ${isSelected ? 'text-blue-700' : 'text-slate-900'}`}>{arr.label}</span>
+                            <span className="text-xs text-slate-500 mt-0.5 block">{arr.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200/80 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSavePreferences}
+                      disabled={isSaving}
+                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
+                    >
+                      {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                      <span>Save Preferences</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {settingsSubTab === 'notifications' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Privacy & Talent Search Visibility</h3>
+                    <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
+                      <div>
+                        <span className="text-sm font-bold text-slate-900 block">Allow Verified Recruiters to Discover Profile</span>
+                        <span className="text-xs text-slate-500">Makes your verified skills matrix and portfolio discoverable by enterprise hiring teams</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={preferences.privacy?.share_profile_with_verified_recruiters ?? true}
+                        onChange={(e) => setPreferences({
+                          ...preferences,
+                          privacy: { ...preferences.privacy, share_profile_with_verified_recruiters: e.target.checked }
+                        })}
+                        className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Notification Alerts</h3>
+                    <div className="space-y-3">
+                      {[
+                        { key: 'email_application_updates', label: 'Application Status Alerts', desc: 'Real-time updates when an application moves stages' },
+                        { key: 'interview_invites', label: 'Interview Invitations', desc: 'Direct alerts for scheduled recruiter viva and interviews' },
+                        { key: 'new_opportunity_alerts', label: 'Matching Job Radar', desc: 'Notifications when postings match your verified competencies' }
+                      ].map((item) => (
+                        <label key={item.key} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer">
+                          <div>
+                            <span className="text-sm font-bold text-slate-900 block">{item.label}</span>
+                            <span className="text-xs text-slate-500">{item.desc}</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={preferences.notifications?.[item.key] ?? true}
+                            onChange={(e) => setPreferences({
+                              ...preferences,
+                              notifications: { ...preferences.notifications, [item.key]: e.target.checked }
+                            })}
+                            className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200/80 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSavePreferences}
+                      disabled={isSaving}
+                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
+                    >
+                      {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                      <span>Save Preferences</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

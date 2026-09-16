@@ -56,7 +56,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
         password: formData.password,
       });
 
-      // Role is automatically detected from backend database
       if (onLoginSuccess) {
         onLoginSuccess(user);
       } else {
@@ -75,14 +74,7 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-50">
-      {/* Forgot Password Modal */}
-      <ForgotPasswordModal
-        isOpen={isForgotPasswordOpen}
-        onClose={() => setIsForgotPasswordOpen(false)}
-      />
-
-      {/* LEFT: Hero Image Panel */}
+    <div className="flex min-h-screen w-full bg-slate-50 relative overflow-x-hidden">
       <RightHeroPanel
         title="Bridge the Gap Between"
         titleHighlight="Academia & Industry"
@@ -94,13 +86,10 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
         ]}
       />
 
-      {/* RIGHT: Form Panel */}
-      <div className="flex w-full flex-col justify-between p-6 sm:p-12 lg:w-1/2 xl:p-16">
-        <div className="mx-auto w-full max-w-md space-y-8 my-auto">
-          {/* Logo */}
+      <div className="flex w-full min-h-screen flex-col justify-between p-6 sm:p-12 lg:w-1/2 xl:p-16 overflow-y-auto">
+        <div className="mx-auto w-full max-w-md space-y-8 my-auto py-8">
           <Logo />
 
-          {/* Header */}
           <div className="space-y-2">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
               Welcome Back
@@ -110,7 +99,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
             </p>
           </div>
 
-          {/* Error Banner */}
           {generalError && (
             <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-xs font-semibold text-red-700">
               <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
@@ -118,9 +106,7 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            {/* Username / Email Field */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 Email or Username
@@ -133,7 +119,7 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="Enter your email or username"
-                  className={`w-full rounded-xl border bg-white py-3 pl-11 pr-4 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-all ${
+                  className={`w-full rounded-xl border bg-white py-3 pl-11 pr-4 text-base sm:text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-colors ${
                     errors.username
                       ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
                       : 'border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10'
@@ -147,7 +133,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
               )}
             </div>
 
-            {/* Password Field */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 Password
@@ -160,7 +145,7 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className={`w-full rounded-xl border bg-white py-3 pl-11 pr-11 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-all ${
+                  className={`w-full rounded-xl border bg-white py-3 pl-11 pr-11 text-base sm:text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-colors ${
                     errors.password
                       ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
                       : 'border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10'
@@ -181,7 +166,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
               )}
             </div>
 
-            {/* Forgot Password Link */}
             <div className="flex justify-end">
               <button
                 type="button"
@@ -192,8 +176,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
               </button>
             </div>
 
-
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -206,7 +188,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
               )}
             </button>
 
-            {/* Social Login Divider */}
             <div className="relative flex items-center justify-center py-2">
               <div className="w-full border-t border-slate-200" />
               <span className="absolute bg-slate-50 px-3 text-xs font-medium text-slate-400">
@@ -214,7 +195,6 @@ const SignIn = ({ onRouteChange, onLoginSuccess }) => {
               </span>
             </div>
 
-            {/* Social Buttons */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"

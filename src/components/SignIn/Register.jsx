@@ -3,6 +3,7 @@ import { User, Lock, Calendar, Eye, EyeOff, GraduationCap, BookOpen, Briefcase, 
 import Logo from './Logo';
 import RightHeroPanel from './RightHeroPanel';
 import CollegeAutocomplete from './CollegeAutocomplete';
+import OrganizationAutocomplete, { COMMON_ORGANIZATIONS } from './OrganizationAutocomplete';
 import authService from '../../api/auth';
 
 const ACADEMIC_DOMAIN_MAP = {
@@ -114,6 +115,12 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
     if (ACADEMIC_DOMAIN_MAP[domain]) {
       lastDetectedDomain.current = domain;
       setFormData((prev) => ({ ...prev, college: ACADEMIC_DOMAIN_MAP[domain] }));
+    } else {
+      const orgMatch = COMMON_ORGANIZATIONS.find(org => org.domain.toLowerCase() === domain);
+      if (orgMatch) {
+        lastDetectedDomain.current = domain;
+        setFormData((prev) => ({ ...prev, company: orgMatch.name }));
+      }
     }
   }, [formData.email]);
 
@@ -225,8 +232,7 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-50">
-      {/* LEFT: Hero Image Panel */}
+    <div className="flex min-h-screen w-full bg-slate-50 relative overflow-x-hidden">
       <RightHeroPanel
         title="Your Journey Starts"
         titleHighlight="Here"
@@ -238,13 +244,10 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
         ]}
       />
 
-      {/* RIGHT: Form Panel */}
-      <div className="flex w-full flex-col justify-between p-6 sm:p-12 lg:w-1/2 xl:p-16 overflow-y-auto">
-        <div className="mx-auto w-full max-w-md space-y-6 my-auto">
-          {/* Logo */}
+      <div className="flex w-full min-h-screen flex-col justify-between p-6 sm:p-12 lg:w-1/2 xl:p-16 overflow-y-auto">
+        <div className="mx-auto w-full max-w-md space-y-6 my-auto py-8">
           <Logo />
 
-          {/* Header */}
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
               Create Your Account
@@ -254,7 +257,6 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
             </p>
           </div>
 
-          {/* Error Banner */}
           {generalError && (
             <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-xs font-semibold text-red-700">
               <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
@@ -262,9 +264,7 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {/* Name Row */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
@@ -557,25 +557,16 @@ const Register = ({ onRouteChange, onLoginSuccess }) => {
             )}
 
             {profession === 'industry' && (
-              <div className="grid grid-cols-2 gap-3 pt-1 animate-fadeIn">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    placeholder="e.g. Infosys, TCS"
-                    className={`w-full rounded-xl border bg-white py-2.5 px-3 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-all ${
-                      errors.company
-                        ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
-                        : 'border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10'
-                    }`}
-                  />
-                  {errors.company && <p className="text-xs font-medium text-red-500">{errors.company}</p>}
-                </div>
+              <div className="space-y-3 pt-1 animate-fadeIn">
+                <OrganizationAutocomplete
+                  value={formData.company}
+                  onChange={(companyName) => {
+                    setFormData((prev) => ({ ...prev, company: companyName }));
+                    if (errors.company) setErrors((prev) => ({ ...prev, company: '' }));
+                  }}
+                  error={errors.company}
+                />
+
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Company Type

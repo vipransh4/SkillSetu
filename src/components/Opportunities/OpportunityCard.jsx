@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   MapPin, 
   Timer, 
@@ -8,11 +8,13 @@ import {
   Check, 
   ShieldCheck,
   Sparkles,
-  Video
+  Video,
+  Share2
 } from 'lucide-react';
 
 const getCompanyInitials = (name = '') => {
-  if (!name) return 'SS';
+  if (!name || typeof name !== 'string') return 'SS';
+  if (name.startsWith('http://') || name.startsWith('https://') || name.includes('/')) return 'SS';
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -41,11 +43,19 @@ const OpportunityCard = ({
   opportunity, 
   onSelect, 
   onApply, 
+  onViewRecruiter,
   isApplied = false,
   searchQuery = '',
   calls = [],
-  onJoinCall
+  onJoinCall,
+  isAcademician = false,
+  isAdvisoryView = false,
+  isMyCompany = false,
+  onExpressInterest,
+  onRecommendToStudents
 }) => {
+  const [imgError, setImgError] = useState(false);
+
   const queryWords = searchQuery
     .toLowerCase()
     .split(/\s+/)
@@ -57,63 +67,111 @@ const OpportunityCard = ({
     return queryWords.some(w => s.includes(w));
   };
 
-  const getRoleBadgeStyle = (typeStr = '') => {
-    const t = typeStr.toLowerCase();
-    if (t.includes('intern')) {
-      return 'bg-amber-50 text-amber-700 border-amber-200/70';
+  const resolveLogoUrl = (url) => {
+    if (!url) return '';
+    let trimmed = String(url).trim();
+    if (trimmed.includes('logo.clearbit.com/')) {
+      const domain = trimmed.split('logo.clearbit.com/')[1]?.split('/')[0] || '';
+      if (domain) return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
     }
-    if (t.includes('full') || t.includes('job')) {
-      return 'bg-blue-50 text-blue-700 border-blue-200/70';
+    if (trimmed.startsWith('/media/') || trimmed.startsWith('/static/')) {
+      return `http://localhost:8000${trimmed}`;
     }
-    if (t.includes('grant') || t.includes('research')) {
-      return 'bg-purple-50 text-purple-700 border-purple-200/70';
-    }
-    return 'bg-slate-100 text-slate-700 border-slate-200/70';
+    return trimmed;
   };
 
-  const companyInitials = opportunity.logo || getCompanyInitials(opportunity.company);
-  const avatarBg = getCompanyAvatarColor(opportunity.company);
+  const displayName = opportunity.hiring_display_name || opportunity.company || 'Partner';
+  const rawLogo = resolveLogoUrl(opportunity.company_logo || opportunity.logo || opportunity.hiring_logo_url);
+  const hasLogoUrl = Boolean(rawLogo && (rawLogo.startsWith('http://') || rawLogo.startsWith('https://') || rawLogo.startsWith('data:')));
+  const companyInitials = getCompanyInitials(displayName);
+  const avatarColor = getCompanyAvatarColor(displayName);
   const matchPercent = opportunity.matchScore || 92;
   const hasCall = calls && calls.length > 0;
 
   return (
     <div 
-      className={`bg-white border rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 flex flex-col justify-between group ${
-        hasCall ? 'border-violet-300 ring-1 ring-violet-200/60' : 'border-slate-200/80'
+      className={`bg-white border rounded-2xl p-5 shadow-sm hover:border-slate-300 transition-all duration-150 flex flex-col justify-between group ${
+        hasCall ? 'border-slate-800' : 'border-slate-200/80'
       }`}
     >
       <div>
         {hasCall && (
-          <div className="mb-2.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-violet-50 text-violet-700 border border-violet-200/80 rounded-full text-[11px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-pulse" />
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 border border-slate-200/80 rounded-md text-[11px] font-medium text-slate-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-900 animate-pulse" />
               Interview Scheduled
             </span>
           </div>
         )}
 
-        <div className="flex items-start justify-between gap-3 mb-3.5">
+        <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`w-11 h-11 rounded-xl ${avatarBg} font-bold text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform select-none`}>
-              <span>{companyInitials}</span>
-            </div>
+            {hasLogoUrl && !imgError ? (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewRecruiter?.(opportunity);
+                }}
+                data-theme-ignore="true"
+                className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:opacity-85 transition-opacity shadow-xs"
+                title={`View ${displayName} profile`}
+              >
+                <img
+                  src={rawLogo}
+                  alt={displayName}
+                  referrerPolicy="no-referrer"
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-contain"
+                  loading="lazy"
+                />
+              </div>
+            ) : (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewRecruiter?.(opportunity);
+                }}
+                className={`w-10 h-10 rounded-xl ${avatarColor} font-semibold text-xs flex items-center justify-center shrink-0 tracking-tight select-none cursor-pointer hover:opacity-85 transition-opacity shadow-xs`}
+                title={`View ${displayName} profile`}
+              >
+                {companyInitials}
+              </div>
+            )}
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-xs font-semibold text-slate-600 truncate">
-                  {opportunity.company}
-                </span>
-                {opportunity.is_verified_partner && (
-                  <ShieldCheck size={13} className="text-blue-600 shrink-0" title="Verified Employer" />
+              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewRecruiter?.(opportunity);
+                  }}
+                  className="text-xs font-semibold text-slate-900 hover:text-indigo-600 truncate underline-offset-2 hover:underline cursor-pointer flex items-center gap-1 text-left"
+                  title={`View ${displayName} profile`}
+                >
+                  <span>{displayName}</span>
+                </button>
+                {opportunity.hiring_mode === 'INDIVIDUAL' && (
+                  <span className="bg-transparent text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded-md">
+                    Recruiter
+                  </span>
                 )}
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getRoleBadgeStyle(opportunity.type || opportunity.role_type)}`}>
+                {isMyCompany && (
+                  <span className="bg-transparent text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded-md">
+                    Your Company
+                  </span>
+                )}
+                {opportunity.is_verified_partner && (
+                  <ShieldCheck size={12} className="text-slate-600 shrink-0" />
+                )}
+                <span className="bg-transparent border border-slate-200/80 text-slate-600 text-[10px] font-medium px-1.5 py-0.2 rounded-md">
                   {opportunity.type || opportunity.role_type || 'Full-Time'}
                 </span>
               </div>
 
               <h3 
                 onClick={() => onSelect?.(opportunity)}
-                className="text-base font-bold text-slate-900 tracking-tight truncate group-hover:text-blue-600 transition-colors cursor-pointer"
+                className="text-sm font-semibold text-slate-900 tracking-tight truncate hover:text-slate-700 transition-colors cursor-pointer"
                 title={opportunity.title}
               >
                 {opportunity.title}
@@ -121,47 +179,47 @@ const OpportunityCard = ({
             </div>
           </div>
 
-          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 tabular-nums">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 tabular-nums shrink-0">
             <Sparkles size={11} className="text-emerald-600" />
             {matchPercent}%
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-slate-50/80 border border-slate-100 mb-3.5 text-xs">
+        <div className="grid grid-cols-2 gap-2 pt-2.5 pb-1 border-t border-slate-100 mb-3 text-xs">
           <div className="flex items-center gap-1.5 min-w-0 text-slate-600">
-            <MapPin size={13} className="text-slate-400 shrink-0" />
-            <span className="truncate font-medium">{opportunity.location || 'Remote'}</span>
+            <MapPin size={12} className="text-slate-400 shrink-0" />
+            <span className="truncate font-medium text-[11px]">{opportunity.location || 'Remote'}</span>
           </div>
 
           <div className="flex items-center gap-1.5 min-w-0 text-slate-600">
-            <Timer size={13} className="text-slate-400 shrink-0" />
-            <span className="truncate font-medium">{opportunity.duration || opportunity.tenure || 'Full-Time'}</span>
+            <Timer size={12} className="text-slate-400 shrink-0" />
+            <span className="truncate font-medium text-[11px]">{opportunity.duration || opportunity.tenure || 'Full-Time'}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 min-w-0 text-slate-600">
-            <IndianRupee size={13} className="text-slate-400 shrink-0" />
-            <span className="truncate font-semibold text-slate-900 tabular-nums">
+          <div className="flex items-center gap-1.5 min-w-0 text-slate-700">
+            <IndianRupee size={12} className="text-slate-400 shrink-0" />
+            <span className="truncate font-semibold tabular-nums text-[11px]">
               {opportunity.stipend || opportunity.stipend_or_ctc || 'Competitive'}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 min-w-0 text-slate-600">
-            <CalendarClock size={13} className="text-slate-400 shrink-0" />
-            <span className="truncate font-medium">{opportunity.deadline || 'Open'}</span>
+            <CalendarClock size={12} className="text-slate-400 shrink-0" />
+            <span className="truncate font-medium tabular-nums text-[11px]">{opportunity.deadline || 'Open'}</span>
           </div>
         </div>
 
         {opportunity.skills && opportunity.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3.5">
+          <div className="flex flex-wrap gap-1 mb-3">
             {opportunity.skills.slice(0, 4).map((skill, idx) => {
               const matched = isSkillMatched(skill);
               return (
                 <span
                   key={idx}
-                  className={`text-[11px] px-2.5 py-0.5 rounded-md font-medium transition-colors ${
+                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors ${
                     matched
-                      ? 'bg-blue-50 text-blue-700 border border-blue-300 font-semibold'
-                      : 'bg-slate-100 text-slate-600 border border-slate-200/60'
+                      ? 'border border-slate-900 text-slate-900 font-semibold'
+                      : 'border border-slate-200/80 text-slate-600'
                   }`}
                 >
                   {skill}
@@ -170,21 +228,21 @@ const OpportunityCard = ({
             })}
             {opportunity.skills.length > 4 && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-md text-slate-400 font-medium">
-                +{opportunity.skills.length - 4} more
+                +{opportunity.skills.length - 4}
               </span>
             )}
           </div>
         )}
 
         {hasCall && (
-          <div className="bg-violet-50/70 border border-violet-100 rounded-xl p-2.5 mb-3.5 space-y-2">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 mb-3 space-y-2">
             {calls.map((call) => (
               <div key={call.id} className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-slate-800 truncate">
-                    Interview · {call.candidateName}
+                    Interview • {call.candidateName}
                   </p>
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <p className="text-[11px] text-slate-500 truncate tabular-nums">
                     {new Date(call.scheduledTime).toLocaleString('en-IN', {
                       dateStyle: 'medium',
                       timeStyle: 'short',
@@ -194,9 +252,9 @@ const OpportunityCard = ({
                 <button
                   type="button"
                   onClick={() => onJoinCall?.(call)}
-                  className="px-3 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95"
+                  className="px-2.5 py-1 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-all cursor-pointer flex items-center gap-1 shrink-0"
                 >
-                  <Video size={12} />
+                  <Video size={11} />
                   Join
                 </button>
               </div>
@@ -209,38 +267,88 @@ const OpportunityCard = ({
         <button
           type="button"
           onClick={() => onSelect?.(opportunity)}
-          className="flex-1 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-center"
+          className="flex-1 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200/80 rounded-xl hover:bg-slate-50 transition-all cursor-pointer text-center"
         >
           View Details
         </button>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!isApplied) {
-              onApply?.(opportunity);
-            }
-          }}
-          disabled={isApplied}
-          className={`flex-1 px-3 py-2 text-xs font-semibold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer ${
-            isApplied
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 cursor-default'
-              : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-98'
-          }`}
-        >
-          {isApplied ? (
-            <>
-              <Check size={13} />
-              <span>Applied</span>
-            </>
-          ) : (
-            <>
-              <span>Apply Now</span>
-              <ArrowUpRight size={13} />
-            </>
-          )}
-        </button>
+        {isAcademician && isAdvisoryView ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onRecommendToStudents) {
+                onRecommendToStudents(opportunity);
+              } else {
+                onSelect?.(opportunity);
+              }
+            }}
+            className="flex-1 px-3 py-2 text-xs font-medium rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Share2 size={12} />
+            <span>Share with Batch</span>
+          </button>
+        ) : isAcademician ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isApplied) {
+                if (onExpressInterest) {
+                  onExpressInterest(opportunity);
+                } else {
+                  onApply?.(opportunity);
+                }
+              }
+            }}
+            disabled={isApplied}
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              isApplied
+                ? 'bg-slate-100 text-slate-500 border border-slate-200/80 cursor-default'
+                : 'bg-slate-900 hover:bg-slate-800 text-white'
+            }`}
+          >
+            {isApplied ? (
+              <>
+                <Check size={12} />
+                <span>SOP Submitted</span>
+              </>
+            ) : (
+              <>
+                <span>Express Interest</span>
+                <ArrowUpRight size={12} />
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isApplied) {
+                onApply?.(opportunity);
+              }
+            }}
+            disabled={isApplied}
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              isApplied
+                ? 'bg-slate-100 text-slate-500 border border-slate-200/80 cursor-default'
+                : 'bg-slate-900 hover:bg-slate-800 text-white'
+            }`}
+          >
+            {isApplied ? (
+              <>
+                <Check size={12} />
+                <span>Applied</span>
+              </>
+            ) : (
+              <>
+                <span>Apply Now</span>
+                <ArrowUpRight size={12} />
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

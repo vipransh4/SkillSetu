@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Check, 
   Filter, 
@@ -13,23 +13,40 @@ import {
   Sparkles,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import apiClient from '../../api/client';
 import authService from '../../api/auth';
 import searchService from '../../api/search';
+import StudentPortfolio from '../Uploading/StudentPortfolio';
 
 const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null }) => {
   const currentUser = authService.getUser();
   const isRecruiter = currentUser?.role === 'industry';
 
+  const PAGE_SIZE = 50;
   const [students, setStudents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingFull, setIsLoadingFull] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const tableTopRef = useRef(null);
+
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [viewingStudentId, setViewingStudentId] = useState(null);
+  const [expandedSkillsIds, setExpandedSkillsIds] = useState({});
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [activeTab, setActiveTab] = useState('bestMatch');
-  const [sortBy, setSortBy] = useState('match'); // 'match' | 'score'
-  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' | 'asc'
+  const [sortBy, setSortBy] = useState('match');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  const [nominateTarget, setNominateTarget] = useState(null);
+  const [nominateListingId, setNominateListingId] = useState('');
+  const [nominateNote, setNominateNote] = useState('');
+  const [isNominating, setIsNominating] = useState(false);
+  const [nominateMessage, setNominateMessage] = useState(null);
+  const [recruiterListings, setRecruiterListings] = useState([]);
 
   // Sync incoming search query from Navbar search (e.g. when pressing Enter in Navbar)
   useEffect(() => {
@@ -50,15 +67,38 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
     let isMounted = true;
     const fetchCandidates = async () => {
       setIsLoading(true);
+      setIsLoadingFull(false);
       const q = searchTerm.trim();
       try {
         if (q) {
-          // Unified 3-signal vector & skill hybrid search engine (identical to Navbar search dropdown)
-          const results = await searchService.searchCandidates(q, 30);
-          if (isMounted) setStudents(results);
+          // 1. Immediately fetch top 30 candidates for instant rendering (<250ms)
+          const top30 = await searchService.searchCandidates(q, 30);
+          if (isMounted) {
+            setStudents(top30);
+            setIsLoading(false);
+          }
+
+          // 2. Concurrently fetch complete matching candidate pool in background
+          setIsLoadingFull(true);
+          searchService.searchCandidates(q, 0)
+            .then((completeResults) => {
+              if (isMounted && completeResults && completeResults.length > 0) {
+                setStudents((prev) => {
+                  const shortlistedMap = new Set(prev.filter((p) => p.shortlisted).map((p) => p.id));
+                  return completeResults.map((c) => ({
+                    ...c,
+                    shortlisted: shortlistedMap.has(c.id) || c.shortlisted
+                  }));
+                });
+              }
+            })
+            .catch((err) => console.warn('Background full search error', err))
+            .finally(() => {
+              if (isMounted) setIsLoadingFull(false);
+            });
         } else {
           // Full candidate roster
-          const response = await apiClient.get('/students/');
+          const response = await apiClient.get('/students/', { params: { limit: 500 } });
           if (Array.isArray(response.data) && isMounted) {
             const mapped = response.data.map((p) => {
               const allSkills = Object.keys(p.skills_matrix || {});
@@ -118,14 +158,44 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
     }
   }, [initialSelectedId, students]);
 
-  const toggleShortlist = (id) => {
-    setStudents((prev) =>
-      prev.map((student) =>
-        student.id === id
-          ? { ...student, shortlisted: !student.shortlisted }
-          : student
-      )
-    );
+  useEffect(() => {
+    if (!isRecruiter) return;
+    apiClient.get('/listings/my-listings')
+      .then((res) => setRecruiterListings(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setRecruiterListings([]));
+  }, [isRecruiter]);
+
+  const openNominate = (student) => {
+    setNominateTarget(student);
+    setNominateListingId('');
+    setNominateNote('');
+    setNominateMessage(null);
+  };
+
+  const submitNominate = async () => {
+    if (!nominateListingId) {
+      setNominateMessage({ type: 'error', text: 'Please select a job listing.' });
+      return;
+    }
+    setIsNominating(true);
+    setNominateMessage(null);
+    try {
+      await apiClient.post('/applications/nominate', {
+        student_id: Number(nominateTarget.id),
+        listing_id: Number(nominateListingId),
+        note: nominateNote || 'Recruiter nominated',
+      });
+      setStudents((prev) =>
+        prev.map((s) => s.id === nominateTarget.id ? { ...s, shortlisted: true } : s)
+      );
+      setNominateMessage({ type: 'success', text: `${nominateTarget.name} has been shortlisted and notified!` });
+      setTimeout(() => setNominateTarget(null), 1800);
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to shortlist. Please try again.';
+      setNominateMessage({ type: 'error', text: msg });
+    } finally {
+      setIsNominating(false);
+    }
   };
 
   const handleSortChange = (type) => {
@@ -165,6 +235,28 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
     });
   }, [students, activeTab, sortBy, sortOrder]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, sortBy, sortOrder]);
+
+  const totalCandidates = filteredStudents.length;
+  const totalPages = Math.max(1, Math.ceil(totalCandidates / PAGE_SIZE));
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (validCurrentPage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, totalCandidates);
+
+  const paginatedStudents = useMemo(() => {
+    return filteredStudents.slice(startIndex, endIndex);
+  }, [filteredStudents, startIndex, endIndex]);
+
+  const handlePageChange = (newPage) => {
+    const target = Math.max(1, Math.min(newPage, totalPages));
+    setCurrentPage(target);
+    if (tableTopRef.current) {
+      tableTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // If a student or guest lands on /students, block candidate viewing and guide to jobs
   if (!isRecruiter) {
     return (
@@ -198,6 +290,22 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
     );
   }
 
+  if (viewingStudentId) {
+    const viewingStudent = students.find((s) => s.id === viewingStudentId);
+    return (
+      <div className="w-full min-h-screen bg-[#F8F9FA]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          <StudentPortfolio
+            studentId={viewingStudentId}
+            blind={false}
+            onBack={() => setViewingStudentId(null)}
+            onRouteChange={onRouteChange}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 min-h-screen">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)] overflow-hidden">
@@ -214,10 +322,18 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
                 </span>
               )}
             </h2>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {searchTerm.trim() 
-                ? `Showing ${students.length} matching candidate${students.length === 1 ? '' : 's'} for "${searchTerm.trim()}"`
-                : 'Live verified candidate profiles indexed from PostgreSQL database'}
+            <p className="text-sm text-slate-500 mt-0.5 flex items-center flex-wrap gap-2">
+              <span>
+                {searchTerm.trim() 
+                  ? `Showing ${totalCandidates} matching candidate${totalCandidates === 1 ? '' : 's'} for "${searchTerm.trim()}"`
+                  : `Verified candidate directory (${totalCandidates} active profile${totalCandidates === 1 ? '' : 's'})`}
+              </span>
+              {isLoadingFull && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-[11px] font-semibold text-blue-700 animate-pulse border border-blue-100">
+                  <Loader2 size={11} className="animate-spin text-blue-600" />
+                  <span>Loading complete matching candidate pool...</span>
+                </span>
+              )}
             </p>
           </div>
 
@@ -294,6 +410,12 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
                 }`}
               >
                 All Talent ({students.length})
+                {isLoadingFull && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md ml-1 animate-pulse" title="Loading complete candidate pool in background">
+                    <Loader2 size={10} className="animate-spin text-blue-500" />
+                    <span>Syncing...</span>
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setActiveTab('shortlisted')}
@@ -329,8 +451,9 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
             )}
           </div>
         ) : (
-          /* Table Container */
-          <div className="overflow-x-auto">
+          <>
+            {/* Table Container */}
+            <div ref={tableTopRef} className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-175">
               <thead>
                 <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
@@ -365,105 +488,205 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/60 transition-colors">
+                {paginatedStudents.map((student) => {
+                  const isSkillsExpanded = Boolean(expandedSkillsIds[student.id]);
+                  const displayedSkills = isSkillsExpanded ? student.skills : student.skills.slice(0, 3);
+
+                  return (
+                    <tr key={student.id} className="hover:bg-slate-50/60 transition-colors">
                     
-                    {/* Candidate Identity */}
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full ${student.avatarBg} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm`}>
-                          {student.avatar}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 leading-snug">{student.name}</p>
-                          <p className="text-xs font-medium mt-0.5 flex items-center gap-1">
-                            {student.verified ? (
-                              <span className="text-emerald-600 flex items-center gap-1 font-semibold">
-                                <Check size={12} className="stroke-3" /> Verified
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">Unverified</span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* College & Department */}
-                    <td className="py-4 px-4">
-                      <p className="font-medium text-slate-800 text-xs sm:text-sm">{student.college}</p>
-                      <p className="text-slate-400 text-xs">{student.department}</p>
-                    </td>
-
-                    {/* Skills */}
-                    <td className="py-4 px-4">
-                      {student.skills.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {student.skills.slice(0, 3).map((skill, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-0.5 text-[11px] font-medium text-slate-700 bg-slate-100 rounded-md"
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setViewingStudentId(student.id)}
+                            className={`w-9 h-9 rounded-full ${student.avatarBg} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
+                            title="View Full Profile"
+                          >
+                            {student.avatar}
+                          </button>
+                          <div>
+                            <button
+                              onClick={() => setViewingStudentId(student.id)}
+                              className="font-bold text-slate-900 leading-snug hover:text-blue-600 transition-colors text-left cursor-pointer"
                             >
-                              {skill}
-                            </span>
-                          ))}
-                          {student.skills.length > 3 && (
-                            <span className="text-[10px] text-slate-400 font-semibold self-center">
-                              +{student.skills.length - 3}
-                            </span>
-                          )}
+                              {student.name}
+                            </button>
+                            <p className="text-xs font-medium mt-0.5 flex items-center gap-1">
+                              {student.verified ? (
+                                <span className="text-emerald-600 flex items-center gap-1 font-semibold">
+                                  <Check size={12} className="stroke-3" /> Verified
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">Unverified</span>
+                              )}
+                            </p>
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">No skills updated yet</span>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Cognitive Assessment */}
-                    <td className="py-4 px-4">
-                      <span className="font-bold text-slate-900">{student.assessmentScore}</span>
-                      <span className="text-slate-400 text-xs font-semibold">/100</span>
-                    </td>
+                      <td className="py-4 px-4">
+                        <p className="font-medium text-slate-800 text-xs sm:text-sm">{student.college}</p>
+                        <p className="text-slate-400 text-xs">{student.department}</p>
+                      </td>
 
-                    {/* Profile Score */}
-                    <td className="py-4 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        student.matchScore > 0
-                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {student.matchScore}% {searchTerm.trim() ? 'Match' : 'Strength'}
-                      </span>
-                    </td>
+                      <td className="py-4 px-4">
+                        {student.skills.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {displayedSkills.map((skill, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => setExpandedSkillsIds((prev) => ({ ...prev, [student.id]: !isSkillsExpanded }))}
+                                className="px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-transparent border border-slate-200 dark:border-slate-800 hover:border-slate-300 rounded-md cursor-pointer transition-colors"
+                              >
+                                {skill}
+                              </button>
+                            ))}
+                            {student.skills.length > 3 && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedSkillsIds((prev) => ({ ...prev, [student.id]: !isSkillsExpanded }))}
+                                className="px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-transparent border border-blue-200 dark:border-blue-500/40 hover:border-blue-300 rounded-md cursor-pointer transition-colors"
+                              >
+                                {isSkillsExpanded ? 'Less' : `+${student.skills.length - 3}`}
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">No skills updated yet</span>
+                        )}
+                      </td>
 
-                    {/* Action Buttons */}
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => toggleShortlist(student.id)}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                            student.shortlisted
-                              ? 'bg-emerald-600 text-white shadow-sm'
-                              : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                          }`}
-                        >
-                          {student.shortlisted ? 'Shortlisted' : 'Shortlist'}
-                        </button>
-                        
-                        <button
-                          onClick={() => setSelectedStudent(student)}
-                          className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-all cursor-pointer"
-                        >
-                          Profile
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="py-4 px-4">
+                        <span className="font-bold text-slate-900">{student.assessmentScore}</span>
+                        <span className="text-slate-400 text-xs font-semibold">/100</span>
+                      </td>
+
+                      <td className="py-4 px-4">
+                        <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          {student.matchScore}% {searchTerm.trim() ? 'Match' : 'Strength'}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => student.shortlisted ? null : openNominate(student)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                              student.shortlisted
+                                ? 'bg-emerald-600 text-white shadow-sm cursor-default'
+                                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                            }`}
+                          >
+                            {student.shortlisted ? '✓ Shortlisted' : 'Shortlist'}
+                          </button>
+                          
+                          <button
+                            onClick={() => setViewingStudentId(student.id)}
+                            className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-all cursor-pointer"
+                          >
+                            Full Profile
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+
+          {/* Pagination Controls (Max 50 candidates per page) */}
+          {totalCandidates > 0 && (
+            <div className="p-4 sm:p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/60">
+              <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
+                <span>
+                  Showing <strong className="text-slate-800 tabular-nums">{startIndex + 1}</strong>–<strong className="text-slate-800 tabular-nums">{endIndex}</strong> of{' '}
+                  <strong className="text-slate-800 tabular-nums">{totalCandidates}</strong> candidates
+                  {isLoadingFull && (
+                    <span className="text-blue-600 font-medium ml-1.5 inline-flex items-center gap-1 text-[11px]">
+                      <Loader2 size={10} className="animate-spin" /> (loading full pool…)
+                    </span>
+                  )}
+                </span>
+                {totalPages > 1 && (
+                  <span className="text-slate-400">· Page {validCurrentPage} of {totalPages}</span>
+                )}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(validCurrentPage - 1)}
+                    disabled={validCurrentPage <= 1}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      validCurrentPage <= 1
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200/40'
+                        : 'bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 shadow-2xs active:scale-95'
+                    }`}
+                  >
+                    <ChevronLeft size={13} />
+                    <span>Previous 50</span>
+                  </button>
+
+                  {/* Page chips */}
+                  <div className="hidden sm:flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - validCurrentPage) <= 1)
+                      .reduce((acc, p, idx, arr) => {
+                        if (idx > 0 && p - arr[idx - 1] > 1) {
+                          acc.push(-1);
+                        }
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, idx) => {
+                        if (p === -1) {
+                          return (
+                            <span key={`ellipsis-${idx}`} className="px-1 text-xs text-slate-400 select-none">
+                              …
+                            </span>
+                          );
+                        }
+                        const isCurrent = p === validCurrentPage;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => handlePageChange(p)}
+                            className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              isCurrent
+                                ? 'bg-blue-600 text-white shadow-2xs'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(validCurrentPage + 1)}
+                    disabled={validCurrentPage >= totalPages}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      validCurrentPage >= totalPages
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200/40'
+                        : 'bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 shadow-2xs active:scale-95'
+                    }`}
+                  >
+                    <span>Next 50</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
 
       {/* Candidate Details Drawer / Modal */}
       {selectedStudent && (
@@ -512,7 +735,7 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
               {selectedStudent.skills.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedStudent.skills.map((skill, index) => (
-                    <span key={index} className="px-3 py-1 text-xs font-semibold text-slate-700 bg-slate-100 rounded-full">
+                    <span key={index} className="px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 bg-transparent rounded-full">
                       {skill}
                     </span>
                   ))}
@@ -528,6 +751,78 @@ const Students = ({ onRouteChange, initialSearch = '', initialSelectedId = null 
             >
               Close Details
             </button>
+          </div>
+        </div>
+      )}
+      {nominateTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col gap-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900 tracking-tight">Shortlist Candidate</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Nominating <span className="font-semibold text-slate-700">{nominateTarget.name}</span> to a role</p>
+              </div>
+              <button onClick={() => setNominateTarget(null)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 cursor-pointer">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Select Job Listing *</label>
+                <select
+                  value={nominateListingId}
+                  onChange={(e) => setNominateListingId(e.target.value)}
+                  className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200/80 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                >
+                  <option value="">— Choose a listing —</option>
+                  {recruiterListings.map((l) => (
+                    <option key={l.id} value={l.id}>{l.title} ({l.role_type})</option>
+                  ))}
+                </select>
+                {recruiterListings.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1">No active listings found. Post a job first.</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Internal Note (optional)</label>
+                <textarea
+                  rows={2}
+                  value={nominateNote}
+                  onChange={(e) => setNominateNote(e.target.value)}
+                  placeholder="e.g. Strong React background, priority candidate"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/80 bg-slate-50 text-slate-900 resize-none focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {nominateMessage && (
+                <p className={`text-xs font-semibold px-3 py-2 rounded-xl ${
+                  nominateMessage.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+                    : 'bg-rose-50 text-rose-700 border border-rose-200/80'
+                }`}>
+                  {nominateMessage.text}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setNominateTarget(null)}
+                className="flex-1 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitNominate}
+                disabled={isNominating}
+                className="flex-1 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm active:scale-95"
+              >
+                {isNominating ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />}
+                {isNominating ? 'Shortlisting…' : 'Confirm Shortlist'}
+              </button>
+            </div>
           </div>
         </div>
       )}

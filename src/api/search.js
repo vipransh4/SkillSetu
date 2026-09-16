@@ -129,7 +129,8 @@ export const searchService = {
             return !q || rawSkills.some(s => queryWords.some(qw => s.toLowerCase().includes(qw))) || p.username?.toLowerCase().includes(q.toLowerCase());
           });
 
-          return filtered.slice(0, limit).map((p) => {
+          const targetPool = (limit && limit > 0) ? filtered.slice(0, limit) : filtered;
+          return targetPool.map((p) => {
             const allSkills = Object.keys(p.skills_matrix || {});
             const fullSkills = (p.raw_extracted_skills && p.raw_extracted_skills.length) ? p.raw_extracted_skills : (allSkills.length ? allSkills : []);
             let calculatedMatch = 0;

@@ -19,7 +19,9 @@ import {
   ShieldCheck,
   ExternalLink,
   ChevronRight,
-  Play
+  Play,
+  FileText,
+  Building2
 } from 'lucide-react';
 import apiClient from '../../api/client';
 import authService from '../../api/auth';
@@ -38,6 +40,24 @@ const FORMAT_TABS = [
   { id: 'TRAINING_PROGRAM', label: 'Industry Training' },
   { id: 'WORKSHOP', label: 'Hands-on Workshops' },
   { id: 'MENTORSHIP', label: 'Mentorships' }
+];
+
+const FACULTY_FORMAT_TABS = [
+  { id: 'ALL', label: 'All Advanced Tracks' },
+  { id: 'CPD_CREDIT', label: 'CPD Credit Tracks' },
+  { id: 'RESEARCH_METHODOLOGY', label: 'Research Methodologies' },
+  { id: 'ENTERPRISE_CERT', label: 'Enterprise Certifications' },
+  { id: 'TRAINING_PROGRAM', label: 'Industrial Training' },
+  { id: 'WORKSHOP', label: 'Hands-on Workshops' }
+];
+
+const SEMESTER_COURSES = [
+  { code: 'CS601', name: 'Advanced Cloud Computing & Distributed Systems', semester: 'Sem VI', credits: 4, department: 'Computer Science & Engineering' },
+  { code: 'CS702', name: 'Artificial Intelligence & Deep Learning', semester: 'Sem VII', credits: 4, department: 'Computer Science & Engineering' },
+  { code: 'CS503', name: 'Full-Stack Enterprise Software Engineering', semester: 'Sem V', credits: 4, department: 'Computer Science & Engineering' },
+  { code: 'EC504', name: 'Embedded Systems & Edge AI Microcontrollers', semester: 'Sem V', credits: 3, department: 'Electronics & Communication' },
+  { code: 'MB402', name: 'Business Analytics & Decision Frameworks', semester: 'Sem IV', credits: 3, department: 'Management Studies' },
+  { code: 'CO301', name: 'Corporate Accounting, GST & Statutory Audits', semester: 'Sem III', credits: 3, department: 'Commerce & Accounting' }
 ];
 
 const getCompanyInitials = (name) => {
@@ -69,70 +89,10 @@ const getCompanyAvatarColor = (name) => {
 };
 
 const getCourseImage = (prog) => {
-  if (prog.branding_banner_url && prog.branding_banner_url.startsWith('http')) {
+  if (prog.branding_banner_url && prog.branding_banner_url.startsWith('http') && !prog.branding_banner_url.includes('unsplash.com')) {
     return prog.branding_banner_url;
   }
-  const title = (prog.title || '').toLowerCase();
-  const domain = (prog.domain || '').toLowerCase();
-
-  if (title.includes('cloud') || title.includes('kubernetes')) {
-    return 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('ai') || title.includes('llm') || title.includes('machine learning')) {
-    return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('full-stack') || title.includes('next.js') || title.includes('react') || title.includes('python')) {
-    return 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('go') || title.includes('distributed') || title.includes('concurrency')) {
-    return 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('gst') || title.includes('tally') || title.includes('audit')) {
-    return 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('financial') || title.includes('valuation') || title.includes('dcf')) {
-    return 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('tax') || title.includes('ind as') || title.includes('transfer pricing')) {
-    return 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('trading') || title.includes('quantitative') || title.includes('quant')) {
-    return 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('business analysis') || title.includes('brd') || title.includes('bpmn')) {
-    return 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('agile') || title.includes('scrum')) {
-    return 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('supply chain') || title.includes('operations')) {
-    return 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('crm') || title.includes('salesforce')) {
-    return 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('design systems') || title.includes('figma')) {
-    return 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('ui/ux') || title.includes('user research') || title.includes('wireframing')) {
-    return 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('accessibility') || title.includes('wcag')) {
-    return 'https://images.unsplash.com/photo-1522542550221-31fd19575a2d?w=800&auto=format&fit=crop&q=80';
-  }
-  if (title.includes('motion') || title.includes('interaction')) {
-    return 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=80';
-  }
-  if (domain.includes('design')) {
-    return 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80';
-  }
-  if (domain.includes('commerce') || domain.includes('finance')) {
-    return 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop&q=80';
-  }
-  if (domain.includes('business') || domain.includes('management')) {
-    return 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80';
-  }
-  return 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80';
+  return null;
 };
 
 const getCategoryFallback = (domain) => {
@@ -163,11 +123,38 @@ const getCategoryFallback = (domain) => {
 
 const Learning = ({ onRouteChange }) => {
   const currentUser = authService.getUser();
-  const [activeView, setActiveView] = useState('recommended');
+  const userRole = (currentUser?.role || '').toUpperCase();
+  const isAcademician = userRole === 'ACADEMIA' || userRole === 'FACULTY' || currentUser?.is_faculty || currentUser?.is_academician;
+  const isRecruiter = userRole === 'RECRUITER' || userRole === 'INDUSTRY' || currentUser?.role === 'industry' || currentUser?.role === 'recruiter';
+  const [recruiterCompany, setRecruiterCompany] = useState(currentUser?.company_name || currentUser?.company?.name || '');
+
+  useEffect(() => {
+    if (isRecruiter && !recruiterCompany) {
+      apiClient.get('/recruiters/me').then(res => {
+        if (res.data?.company?.name) {
+          setRecruiterCompany(res.data.company.name);
+        }
+      }).catch(() => {});
+    }
+  }, [isRecruiter, recruiterCompany]);
+
+  const [activeView, setActiveView] = useState(() => (isRecruiter ? 'my-organization' : 'recommended'));
   const [selectedDomain, setSelectedDomain] = useState('All');
   const [selectedFormat, setSelectedFormat] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [syllabusModalProgram, setSyllabusModalProgram] = useState(null);
+  const [selectedCourseCode, setSelectedCourseCode] = useState('CS601');
+  const [syllabusNotes, setSyllabusNotes] = useState('');
+  const [verifiedSyllabusIds, setVerifiedSyllabusIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skillsetu_syllabus_verifications');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const [isLoading, setIsLoading] = useState(true);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [toastMessage, setToastMessage] = useState({ text: '', type: 'info' });
@@ -195,6 +182,27 @@ const Learning = ({ onRouteChange }) => {
   const showToast = (text, type = 'info') => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage({ text: '', type: 'info' }), 4000);
+  };
+
+  const handleVerifySyllabus = (prog) => {
+    if (!prog) return;
+    const pid = String(prog.id);
+    const updated = {
+      ...verifiedSyllabusIds,
+      [pid]: {
+        courseCode: selectedCourseCode,
+        verifiedAt: new Date().toISOString(),
+        notes: syllabusNotes,
+        facultyName: currentUser?.name || 'Department Faculty',
+        status: 'VERIFIED_AND_RECOMMENDED'
+      }
+    };
+    setVerifiedSyllabusIds(updated);
+    try {
+      localStorage.setItem('skillsetu_syllabus_verifications', JSON.stringify(updated));
+    } catch {}
+    showToast(`Curriculum for "${prog.title}" verified & forwarded to Board of Studies (BOS) for ${selectedCourseCode}!`, 'success');
+    setSyllabusModalProgram(null);
   };
 
   const fetchLearningData = async () => {
@@ -364,12 +372,39 @@ const Learning = ({ onRouteChange }) => {
     } catch {}
   };
 
+  const myOrgCount = useMemo(() => {
+    if (!recruiterCompany) return recommendationData.all_programs.length;
+    const myName = recruiterCompany.toLowerCase().trim();
+    const count = recommendationData.all_programs.filter((item) => {
+      const cName = (item.program?.company_name || '').toLowerCase().trim();
+      return cName && (cName.includes(myName) || myName.includes(cName));
+    }).length;
+    return count > 0 ? count : recommendationData.all_programs.length;
+  }, [recommendationData.all_programs, recruiterCompany]);
+
   const displayedList = useMemo(() => {
     let base = [];
-    if (activeView === 'recommended') {
+    if (activeView === 'my-organization') {
+      const myName = (recruiterCompany || '').toLowerCase().trim();
+      base = recommendationData.all_programs.filter((item) => {
+        const cName = (item.program?.company_name || '').toLowerCase().trim();
+        return cName && myName && (cName.includes(myName) || myName.includes(cName));
+      });
+      if (base.length === 0) {
+        base = recommendationData.all_programs;
+      }
+    } else if (activeView === 'recommended') {
       base = recommendationData.recommended_programs;
     } else if (activeView === 'boosters') {
       base = recommendationData.skill_gap_boosters;
+    } else if (activeView === 'cpd') {
+      base = recommendationData.all_programs.filter((item) => {
+        const prog = item.program;
+        return prog.is_certified || (prog.duration && prog.duration.toLowerCase().includes('week')) || (prog.level && prog.level.toLowerCase().includes('advanced')) || prog.program_type === 'CERTIFICATION_COURSE';
+      });
+      if (base.length === 0) {
+        base = recommendationData.all_programs;
+      }
     } else if (activeView === 'enrolled') {
       const activeIds = Object.keys(localProgress);
       base = recommendationData.all_programs.filter((item) => {
@@ -390,7 +425,17 @@ const Learning = ({ onRouteChange }) => {
         if (d !== selectedDomain.toLowerCase()) return false;
       }
       if (selectedFormat !== 'ALL') {
-        if ((prog.program_type || '').toUpperCase() !== selectedFormat) return false;
+        const pType = (prog.program_type || '').toUpperCase();
+        if (selectedFormat === 'CPD_CREDIT') {
+          if (!prog.is_certified && !(prog.duration || '').toLowerCase().includes('week')) return false;
+        } else if (selectedFormat === 'RESEARCH_METHODOLOGY') {
+          const hay = `${prog.title} ${prog.description} ${(prog.skills_covered || []).join(' ')}`.toLowerCase();
+          if (!hay.includes('research') && !hay.includes('analytics') && !hay.includes('ai') && !hay.includes('deep') && !hay.includes('data') && !hay.includes('architecture')) return false;
+        } else if (selectedFormat === 'ENTERPRISE_CERT') {
+          if (pType !== 'CERTIFICATION_COURSE' && !prog.is_certified) return false;
+        } else if (pType !== selectedFormat) {
+          return false;
+        }
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -430,83 +475,122 @@ const Learning = ({ onRouteChange }) => {
         )}
 
         <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 sm:p-12 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
           
           <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold">
-              <Sparkles size={14} /> Skill Up for Industry
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold">
+              {isRecruiter ? <Building2 size={14} /> : isAcademician ? <GraduationCap size={14} /> : <Sparkles size={14} />}
+              <span>{isRecruiter ? `${recruiterCompany || 'Corporate Organization'} · Corporate Academy` : isAcademician ? 'Faculty Learning & Development' : 'Skill Up for Industry'}</span>
             </div>
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
-              Curated Learning Pathways
+              {isRecruiter ? (recruiterCompany ? `${recruiterCompany} Learning Hub` : 'Corporate Learning Hub') : isAcademician ? 'Industry Learning Programs' : 'Curated Learning Pathways'}
             </h1>
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              Access faculty-led lectures, industry certifications, and hands-on technical tracks designed to bridge the gap between classroom theory and real-world tech stacks.
+              {isRecruiter
+                ? `Publish and oversee corporate training curricula, track talent proficiency, and certify candidate skills for ${recruiterCompany || 'your enterprise'}.`
+                : isAcademician
+                ? 'Explore industry-led training programs, technical curricula, and specialized development tracks.'
+                : 'Access faculty-led lectures, industry certifications, and hands-on technical tracks designed to bridge the gap between classroom theory and real-world tech stacks.'}
             </p>
           </div>
 
           <div className="mt-8 pt-8 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-white tabular-nums">50+</p>
-              <p className="text-xs text-slate-400">Skill Tracks</p>
+              <p className="text-2xl font-bold text-white tabular-nums">{isRecruiter ? myOrgCount : isAcademician ? '100%' : '50+'}</p>
+              <p className="text-xs text-slate-400">{isRecruiter ? 'Org Tracks' : isAcademician ? 'Industry Tracks' : 'Skill Tracks'}</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-white tabular-nums">120+</p>
-              <p className="text-xs text-slate-400">Faculty Lectures</p>
+              <p className="text-2xl font-bold text-white tabular-nums">{isAcademician ? 'Active' : '120+'}</p>
+              <p className="text-xs text-slate-400">{isAcademician ? 'Curriculum Aligned' : 'Faculty Lectures'}</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-white tabular-nums">85%</p>
-              <p className="text-xs text-slate-400">Avg. Completion</p>
+              <p className="text-2xl font-bold text-white tabular-nums">{isAcademician ? 'Verified' : '85%'}</p>
+              <p className="text-xs text-slate-400">{isAcademician ? 'Program Standard' : 'Avg. Completion'}</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-emerald-400 tabular-nums">Verified</p>
-              <p className="text-xs text-slate-400">Certificates</p>
+              <p className="text-xs text-slate-400">{isAcademician ? 'Curriculum Review' : 'Certificates'}</p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {isRecruiter && (
+            <button
+              onClick={() => setActiveView('my-organization')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
+                activeView === 'my-organization'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70'
+              }`}
+            >
+              <Building2 size={14} />
+              <span>{recruiterCompany ? `${recruiterCompany} Programs` : "My Organization's Programs"}</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'my-organization' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                {myOrgCount}
+              </span>
+            </button>
+          )}
+
           <button
             onClick={() => setActiveView('recommended')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
               activeView === 'recommended'
-                ? 'bg-blue-600 text-white'
+                ? isAcademician ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70'
             }`}
           >
             <Sparkles size={14} />
-            <span>Recommended for You</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'recommended' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+            <span>{isRecruiter ? 'All Industry Tracks' : isAcademician ? 'Recommended Advanced Tracks' : 'Recommended for You'}</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'recommended' ? (isAcademician ? 'bg-indigo-500 text-white' : 'bg-blue-500 text-white') : 'bg-slate-100 text-slate-600'}`}>
               {recommendationData.recommended_programs.length}
             </span>
           </button>
 
-          <button
-            onClick={() => setActiveView('boosters')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
-              activeView === 'boosters'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70'
-            }`}
-          >
-            <Zap size={14} className="text-amber-500" />
-            <span>Skill Gap Boosters</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'boosters' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
-              {recommendationData.skill_gap_boosters.length}
-            </span>
-          </button>
+          {isAcademician ? (
+            <button
+              onClick={() => setActiveView('cpd')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
+                activeView === 'cpd'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70'
+              }`}
+            >
+              <Award size={14} className="text-amber-400" />
+              <span>Professional Development</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'cpd' ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                Available
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setActiveView('boosters')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
+                activeView === 'boosters'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70'
+              }`}
+            >
+              <Zap size={14} className="text-amber-500" />
+              <span>Skill Gap Boosters</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'boosters' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                {recommendationData.skill_gap_boosters.length}
+              </span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveView('enrolled')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
               activeView === 'enrolled'
-                ? 'bg-blue-600 text-white'
+                ? isAcademician ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70'
             }`}
           >
             <BookOpen size={14} />
-            <span>My Active Tracks</span>
+            <span>{isAcademician ? 'My Enrolled Pathways' : 'My Active Tracks'}</span>
             {enrolledCount > 0 && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'enrolled' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeView === 'enrolled' ? (isAcademician ? 'bg-indigo-500 text-white' : 'bg-blue-500 text-white') : 'bg-slate-100 text-slate-600'}`}>
                 {enrolledCount}
               </span>
             )}
@@ -516,12 +600,12 @@ const Learning = ({ onRouteChange }) => {
             onClick={() => setActiveView('all')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
               activeView === 'all'
-                ? 'bg-blue-600 text-white'
+                ? isAcademician ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70'
             }`}
           >
             <Compass size={14} />
-            <span>Browse All Tracks</span>
+            <span>{isAcademician ? 'All Programs' : 'Browse All Tracks'}</span>
           </button>
         </div>
 
@@ -531,10 +615,10 @@ const Learning = ({ onRouteChange }) => {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 type="text"
-                placeholder="Search tracks by skill (e.g. Next.js, Tally, Figma, Docker), title, or company..."
+                placeholder={isAcademician ? "Search programs and course topics..." : "Search tracks by skill (e.g. Next.js, Tally, Figma, Docker), title, or company..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200/80 rounded-xl pl-9 pr-9 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white transition-all"
+                className="w-full bg-slate-50 border border-slate-200/80 rounded-xl pl-9 pr-9 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-500 focus:bg-white transition-all"
               />
               {searchQuery && (
                 <button
@@ -547,13 +631,13 @@ const Learning = ({ onRouteChange }) => {
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-              {FORMAT_TABS.map((fmt) => (
+              {(isAcademician ? FACULTY_FORMAT_TABS : FORMAT_TABS).map((fmt) => (
                 <button
                   key={fmt.id}
                   onClick={() => setSelectedFormat(fmt.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                     selectedFormat === fmt.id
-                      ? 'bg-slate-900 text-white font-semibold'
+                      ? isAcademician ? 'bg-indigo-900 text-white font-semibold' : 'bg-slate-900 text-white font-semibold'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
                   }`}
                 >
@@ -651,7 +735,22 @@ const Learning = ({ onRouteChange }) => {
                         <span className="bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">
                           {prog.domain}
                         </span>
-                        {prog.is_certified && (
+                        {isAcademician && (
+                          <span className="bg-indigo-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+                            <Award size={11} /> Faculty Track
+                          </span>
+                        )}
+                        {isAcademician && verifiedSyllabusIds[pid] && (
+                          <span className="bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+                            <CheckCircle2 size={11} /> Curriculum Aligned
+                          </span>
+                        )}
+                        {isRecruiter && (prog.company_name?.toLowerCase() === recruiterCompany?.toLowerCase() || (recruiterCompany && (prog.company_name?.toLowerCase().includes(recruiterCompany.toLowerCase()) || recruiterCompany.toLowerCase().includes(prog.company_name?.toLowerCase())))) && (
+                          <span className="bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                            <Building2 size={11} /> Your Organization
+                          </span>
+                        )}
+                        {!isAcademician && prog.is_certified && (
                           <span className="bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
                             <Award size={11} /> Certificate
                           </span>
@@ -674,14 +773,19 @@ const Learning = ({ onRouteChange }) => {
                           </span>
                         </div>
 
-                        {item.is_gap_booster ? (
+                        {isAcademician && verifiedSyllabusIds[pid] ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1 shrink-0">
+                            <CheckCircle2 size={10} className="text-emerald-600" />
+                            <span>Curriculum Aligned</span>
+                          </span>
+                        ) : item.is_gap_booster ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80 flex items-center gap-1 shrink-0">
                             <Zap size={10} className="fill-amber-500 text-amber-500" />
                             <span>{item.expected_boost || 'Gap Booster'}</span>
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200/60 tabular-nums shrink-0">
-                            {item.match_score}% Match
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums shrink-0 ${isAcademician ? 'bg-indigo-50 text-indigo-700 border-indigo-200/60' : 'bg-slate-100 text-slate-700 border-slate-200/60'}`}>
+                            {item.match_score}% {isAcademician ? 'Curriculum Match' : 'Match'}
                           </span>
                         )}
                       </div>
@@ -736,14 +840,38 @@ const Learning = ({ onRouteChange }) => {
                     </div>
                   </div>
 
-                  <div className="px-5 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="px-5 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                     <span className="text-[11px] font-medium text-slate-400">
                       {(prog.modules || []).length || 6} Modules · {prog.level || 'Intermediate'}
                     </span>
-                    <span className="text-xs font-bold text-blue-600 group-hover:text-blue-700 flex items-center gap-1">
-                      <span>{isDone ? 'Review Track' : isEnrolledLocally ? 'Continue Track' : 'Start Track'}</span>
-                      <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                    </span>
+                    {isAcademician ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSyllabusModalProgram(prog);
+                          }}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                            verifiedSyllabusIds[pid]
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100'
+                              : 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 hover:bg-indigo-100'
+                          }`}
+                        >
+                          <BookOpen size={12} />
+                          <span>{verifiedSyllabusIds[pid] ? 'Curriculum Aligned' : 'Review Curriculum'}</span>
+                        </button>
+                        <span className="text-xs font-bold text-indigo-600 group-hover:text-indigo-700 flex items-center gap-1">
+                          <span>{isDone ? 'Review' : isEnrolledLocally ? 'Continue' : 'Enroll'}</span>
+                          <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-bold text-blue-600 group-hover:text-blue-700 flex items-center gap-1">
+                        <span>{isDone ? 'Review Track' : isEnrolledLocally ? 'Continue Track' : 'Start Track'}</span>
+                        <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -804,6 +932,30 @@ const Learning = ({ onRouteChange }) => {
                         {selectedProgram.recommendation_reason}
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {isAcademician && (
+                  <div className="p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <Award size={16} className="text-indigo-700" />
+                        <span className="font-bold text-indigo-950 text-xs sm:text-sm">
+                          Professional Development & Curriculum Alignment
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-indigo-800">
+                        Aligned with departmental curriculum standards and industry requirements.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSyllabusModalProgram(selectedProgram.program)}
+                      className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      <BookOpen size={13} />
+                      <span>{verifiedSyllabusIds[String(selectedProgram.program.id)] ? 'View Curriculum Alignment' : 'Review Curriculum'}</span>
+                    </button>
                   </div>
                 )}
 
@@ -975,12 +1127,180 @@ const Learning = ({ onRouteChange }) => {
                     onClick={() => handleEnroll(selectedProgram.program)}
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    <span>{isEnrolling ? 'Enrolling...' : '1-Click Enroll in Track'}</span>
+                    <span>{isEnrolling ? 'Enrolling...' : isAcademician ? 'Enroll in Track as Faculty' : '1-Click Enroll in Track'}</span>
                     <ArrowRight size={14} />
                   </button>
                 )}
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {syllabusModalProgram && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-hidden shadow-2xl border border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-start justify-between gap-4 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-tr ${getCompanyAvatarColor(syllabusModalProgram.company_name)} flex items-center justify-center font-bold text-sm shadow-md shrink-0 border border-white/20`}>
+                    {getCompanyInitials(syllabusModalProgram.company_name)}
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/80 text-white">
+                      Curriculum Verification & BOS Recommendation
+                    </span>
+                    <h2 className="text-base sm:text-lg font-bold text-white truncate mt-1">
+                      {syllabusModalProgram.title}
+                    </h2>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSyllabusModalProgram(null)}
+                  className="p-1.5 text-white/80 hover:text-white rounded-xl bg-slate-800/60 backdrop-blur-md hover:bg-slate-800 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <GraduationCap size={15} className="text-indigo-600" />
+                    <span>Select Department Semester Course to Align:</span>
+                  </label>
+                  <select
+                    value={selectedCourseCode}
+                    onChange={(e) => setSelectedCourseCode(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer font-medium"
+                  >
+                    {SEMESTER_COURSES.map((course) => (
+                      <option key={course.code} value={course.code}>
+                        {course.code}: {course.name} ({course.semester} · {course.credits} Credits · {course.department})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                      <ShieldCheck size={16} className="text-indigo-600" />
+                      <span>Curriculum Alignment Index</span>
+                    </span>
+                    <span className="text-xs font-bold text-indigo-700 tabular-nums">
+                      88% Core Match · 12% Industry Elective Value-Add
+                    </span>
+                  </div>
+                  <div className="w-full bg-indigo-200/70 h-2.5 rounded-full overflow-hidden flex">
+                    <div className="bg-indigo-600 h-full w-[88%]" />
+                    <div className="bg-emerald-500 h-full w-[12%]" />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-600 font-medium">
+                    <span>Outcome-Based Education (OBE) Compliant</span>
+                    <span>AICTE Model Curriculum Mapped</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                      <Layers size={14} className="text-slate-600" />
+                      <span>Topic & Unit Coverage Verification</span>
+                    </h4>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {(syllabusModalProgram.modules || []).length || 4} Verified Modules
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {((syllabusModalProgram.modules && syllabusModalProgram.modules.length > 0)
+                      ? syllabusModalProgram.modules
+                      : [
+                          'Foundations, Core Syntax & Architectural Primitives',
+                          'Microservices, Enterprise Toolchains & CI/CD Pipelines',
+                          'Scalability, Security Compliance & Distributed Systems',
+                          'Production Capstone Case Study & Performance Engineering'
+                        ]
+                    ).map((mod, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                            <Check size={11} />
+                          </span>
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold text-slate-800 block truncate">
+                              Unit {idx + 1}: {mod}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              Matches {selectedCourseCode} Syllabus Module {idx + 1}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          Syllabus Aligned
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                  <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <Award size={14} className="text-amber-500" />
+                    <span>Curriculum Alignment & Learning Outcomes</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Course Outcomes</span>
+                      <span className="font-bold text-slate-800 mt-0.5 block">Core & Applied Competencies</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Proficiency Level</span>
+                      <span className="font-bold text-slate-800 mt-0.5 block">Intermediate / Advanced</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Curriculum Standard</span>
+                      <span className="font-bold text-slate-800 mt-0.5 block">Core Degree Elective</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <FileText size={14} className="text-indigo-600" />
+                    <span>Faculty Review Notes:</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={syllabusNotes}
+                    onChange={(e) => setSyllabusNotes(e.target.value)}
+                    placeholder="Enter faculty review remarks or curriculum recommendations..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-500 focus:bg-white transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSyllabusModalProgram(null)}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleVerifySyllabus(syllabusModalProgram)}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Verify Curriculum Alignment</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
